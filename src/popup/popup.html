@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeetGitSync</title>
+    <link rel="stylesheet" href="../ui/base.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <img src="../icons/icon-32.png" width="22" height="22" alt="" />
+      <h1>LeetGitSync</h1>
+      <span id="connection" class="chip">Checking…</span>
+    </header>
+
+    <main id="main" aria-live="polite">
+      <p class="loading muted">Loading…</p>
+    </main>
+
+    <footer class="footer">
+      <button id="retry-failed" class="btn" type="button" disabled>Retry failed</button>
+      <button id="open-settings" class="btn" type="button">Settings</button>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

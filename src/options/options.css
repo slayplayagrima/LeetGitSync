@@ -1,0 +1,272 @@
+body {
+  background: var(--bg-subtle);
+  padding: 24px 16px 64px;
+}
+
+.page-header,
+.toc,
+main {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.page-header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.page-header p {
+  margin: 2px 0 0;
+}
+.page-header img {
+  border-radius: 7px;
+}
+
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+.toc a {
+  text-decoration: none;
+}
+.toc a:hover {
+  text-decoration: underline;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+
+label > span,
+legend {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px var(--font);
+}
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.hint {
+  display: block;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.field-error {
+  display: block;
+  font-size: 12px;
+  color: var(--danger);
+  min-height: 0;
+}
+.field-error:empty {
+  display: none;
+}
+
+fieldset {
+  border: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.radio,
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 6px 0;
+}
+.radio input,
+.check input {
+  margin-top: 3px;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--bg-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.row input {
+  flex: 1;
+  min-width: 220px;
+}
+.actions {
+  margin-top: 12px;
+}
+
+.token-block {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+.token-block p {
+  margin: 4px 0;
+}
+
+.status-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+.status-box.ok {
+  background: var(--success-bg);
+  border-color: transparent;
+}
+.status-box.error {
+  background: var(--danger-bg);
+  border-color: transparent;
+}
+.status-box .chip {
+  margin-right: 8px;
+}
+
+.inline-msg {
+  font-size: 12.5px;
+  margin: 6px 0 0;
+}
+.inline-msg.ok {
+  color: var(--success);
+}
+.inline-msg.error {
+  color: var(--danger);
+}
+
+.lang-folders summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.lang-grid label span {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.preview {
+  margin: 12px 0 0;
+}
+
+.save-bar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  z-index: 1;
+}
+.save-bar .inline-msg {
+  margin: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+th,
+td {
+  text-align: left;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+th {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+td .sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+td .err {
+  display: block;
+  font-size: 11.5px;
+  color: var(--danger);
+}
+td .warn {
+  display: block;
+  font-size: 11.5px;
+  color: var(--warning);
+}
+td.actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+.empty-row td {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 18px;
+}
+
+.steps li,
+.perm-list li {
+  margin: 6px 0;
+}

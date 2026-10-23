@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LeetGitSync Settings</title>
+    <link rel="stylesheet" href="../ui/base.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <img src="../icons/icon-48.png" width="32" height="32" alt="" />
+      <div>
+        <h1>LeetGitSync settings</h1>
+        <p class="muted">Saves your accepted LeetCode submissions to a GitHub repository you control.</p>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="Sections">
+      <a href="#github">GitHub</a>
+      <a href="#sync">Sync</a>
+      <a href="#files">Files</a>
+      <a href="#history">History</a>
+      <a href="#setup">Setup guide</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+
+    <main>
+      <section id="github" class="panel" aria-labelledby="github-h">
+        <h2 id="github-h">GitHub connection</h2>
+        <div id="connection-status" class="status-box" role="status" aria-live="polite"></div>
+
+        <form id="repo-form" class="grid" novalidate>
+          <label>
+            <span>Repository owner</span>
+            <input id="owner" name="owner" autocomplete="off" spellcheck="false" required />
+            <small class="field-error" data-for="owner"></small>
+          </label>
+          <label>
+            <span>Repository name</span>
+            <input id="repo" name="repo" autocomplete="off" spellcheck="false" required />
+            <small class="field-error" data-for="repo"></small>
+          </label>
+          <label>
+            <span>Branch</span>
+            <input id="branch" name="branch" autocomplete="off" spellcheck="false" required />
+            <small class="hint">Use the repository's default branch so commits can count toward your contribution graph.</small>
+            <small class="field-error" data-for="branch"></small>
+          </label>
+        </form>
+
+        <div class="token-block">
+          <label for="token"><span>Fine-grained personal access token</span></label>
+          <p id="token-state" class="muted"></p>
+          <div class="row">
+            <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-describedby="token-help" />
+            <button id="save-token" class="btn btn-primary" type="button">Save token</button>
+          </div>
+          <p id="token-help" class="hint">
+            Needs access to only this repository, with <strong>Contents: Read and write</strong>. The token is stored in this
+            browser profile only and is sent only to api.github.com.
+          </p>
+          <p id="token-msg" class="inline-msg" role="status"></p>
+        </div>
+
+        <div class="row actions">
+          <button id="test-connection" class="btn" type="button">Test connection</button>
+          <button id="remove-token" class="btn btn-danger" type="button">Remove stored token</button>
+          <button id="disconnect" class="btn btn-danger" type="button">Disconnect GitHub</button>
+        </div>
+      </section>
+
+      <section id="sync" class="panel" aria-labelledby="sync-h">
+        <h2 id="sync-h">Sync behaviour</h2>
+        <fieldset>
+          <legend>Sync mode</legend>
+          <label class="radio"><input type="radio" name="syncMode" value="auto" /> Automatic: sync every accepted submission</label>
+          <label class="radio"><input type="radio" name="syncMode" value="manual" /> Manual: queue accepted submissions and sync when I confirm</label>
+        </fieldset>
+        <fieldset>
+          <legend>When a later accepted submission has different code</legend>
+          <label class="radio">
+            <input type="radio" name="historyPolicy" value="update" />
+            Update the solution file (recommended). Earlier versions remain in the Git history.
+          </label>
+          <label class="radio">
+            <input type="radio" name="historyPolicy" value="separate" />
+            Keep each distinct submission as its own file, e.g. <code>python/0001-two-sum/123456789.py</code>
+          </label>
+          <p class="hint">Either way, a submission whose code is already in the repository never creates a commit.</p>
+        </fieldset>
+      </section>
+
+      <section id="files" class="panel" aria-labelledby="files-h">
+        <h2 id="files-h">Files</h2>
+        <div class="grid">
+          <label>
+            <span>Root folder (optional)</span>
+            <input id="rootFolder" autocomplete="off" spellcheck="false" placeholder="e.g. leetcode" />
+            <small class="field-error" data-for="rootFolder"></small>
+          </label>
+          <label>
+            <span>Filename</span>
+            <select id="filenameStyle">
+              <option value="number-slug">0001-two-sum.py</option>
+              <option value="number-dot-slug">0001.two-sum.py</option>
+              <option value="slug">two-sum.py</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input id="includeHeader" type="checkbox" /> Add a comment header with problem and submission details</label>
+        <label class="check"><input id="metadataSidecar" type="checkbox" /> Also save a JSON metadata file under <code>metadata/</code> (same commit)</label>
+
+        <details class="lang-folders">
+          <summary>Language folders</summary>
+          <p class="hint">Folder used for each language. Leave the defaults unless you prefer different names.</p>
+          <div id="language-folders" class="lang-grid"></div>
+          <small class="field-error" data-for="languageFolders"></small>
+        </details>
+
+        <p class="preview">Example path: <code id="path-preview"></code></p>
+      </section>
+
+      <div class="save-bar">
+        <span id="save-msg" class="inline-msg" role="status"></span>
+        <button id="save-settings" class="btn btn-primary" type="button">Save settings</button>
+      </div>
+
+      <section id="history" class="panel" aria-labelledby="history-h">
+        <h2 id="history-h">Sync history</h2>
+        <div class="row actions">
+          <button id="retry-all" class="btn" type="button">Retry failed</button>
+          <button id="clear-history" class="btn btn-danger" type="button">Clear local history…</button>
+        </div>
+        <p class="hint">Clearing history only forgets local records. It never deletes anything on GitHub.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Problem</th>
+                <th scope="col">Language</th>
+                <th scope="col">Status</th>
+                <th scope="col">Updated</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="setup" class="panel" aria-labelledby="setup-h">
+        <h2 id="setup-h">Setup guide</h2>
+        <ol class="steps">
+          <li>
+            <strong>Create the repository.</strong> On GitHub, create <code id="guide-repo">leetcode-solutions</code> (public or private) and tick
+            “Add a README file” so the default branch exists.
+          </li>
+          <li>
+            <strong>Create a fine-grained token.</strong> Open
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → Settings → Developer settings → Fine-grained tokens</a>.
+            Choose your personal account as the resource owner and set an expiration.
+          </li>
+          <li><strong>Restrict it.</strong> Under Repository access choose “Only select repositories” and pick only the destination repository.</li>
+          <li><strong>Grant one permission.</strong> Under Repository permissions set <strong>Contents</strong> to “Read and write”. Leave everything else at “No access” (Metadata: Read-only is added automatically).</li>
+          <li><strong>Save it here.</strong> Paste the token above and click Save token. Never paste it anywhere else.</li>
+          <li><strong>Test the connection</strong> and fix anything it reports.</li>
+          <li><strong>Save settings</strong>, then submit a solution on leetcode.com.</li>
+        </ol>
+      </section>
+
+      <section id="privacy" class="panel" aria-labelledby="privacy-h">
+        <h2 id="privacy-h">Permissions and privacy</h2>
+        <ul class="perm-list">
+          <li><strong>storage</strong>: keeps your settings, token and sync history in this browser profile.</li>
+          <li><strong>alarms</strong>: wakes the extension to retry a failed sync with backoff.</li>
+          <li><strong>api.github.com</strong>: the only host the extension sends requests to with your token.</li>
+          <li><strong>leetcode.com content scripts</strong>: watch for your accepted submissions and read that submission back from LeetCode. Nothing on other sites is read.</li>
+        </ul>
+        <p>
+          A token stored in a browser extension is protected by your OS account and Chrome profile, not by encryption the
+          extension controls. Anyone with access to this profile could extract it. Keep the token limited to one
+          repository and give it an expiration.
+        </p>
+        <p>
+          If the token may be exposed, revoke it at
+          <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">github.com/settings/personal-access-tokens</a>,
+          then click “Remove stored token”.
+        </p>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
