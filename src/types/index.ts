@@ -10,6 +10,8 @@ export type SyncStatus =
 
 export type SyncMode = "auto" | "manual";
 
+export type Platform = "leetcode" | "codeforces";
+
 /** What to do when a later accepted submission for the same problem has different code. */
 export type HistoryPolicy =
   /** Overwrite the main solution file; earlier versions stay in the Git history. */
@@ -49,6 +51,8 @@ export interface SyncErrorInfo {
 
 /** Validated data about one submission, as returned by LeetCode for the signed-in user. */
 export interface SubmissionDetails {
+  /** Defaults to "leetcode". Codeforces ids are stored as "cf-<id>" so they never collide. */
+  platform?: Platform;
   submissionId: string;
   code: string;
   /** LeetCode language slug, e.g. "python3". */
@@ -65,9 +69,14 @@ export interface SubmissionDetails {
   frontendId?: string;
   title?: string;
   difficulty?: string;
+  /** Codeforces problem rating, when known. */
+  rating?: number;
+  /** Codeforces contest id, used for URLs. */
+  contestId?: number;
 }
 
 export interface SyncRecord {
+  platform?: Platform;
   submissionId: string;
   titleSlug: string;
   title?: string;
@@ -108,6 +117,13 @@ export interface Settings {
   languageFolders: Record<string, string>;
   includeHeader: boolean;
   metadataSidecar: boolean;
+  codeforcesEnabled: boolean;
+  /** Codeforces handle; empty means "detect from the signed-in page". */
+  codeforcesHandle: string;
+  /** Folder (under the root folder) that holds Codeforces solutions. */
+  codeforcesFolder: string;
+  /** Epoch ms when Codeforces sync was turned on; older submissions are not synced automatically. */
+  codeforcesSince?: number;
 }
 
 export interface ConnectionState {

@@ -60,6 +60,10 @@ function readForm(): Settings {
     languageFolders,
     includeHeader: inputs.includeHeader.checked,
     metadataSidecar: inputs.metadataSidecar.checked,
+    codeforcesEnabled: base?.codeforcesEnabled ?? false,
+    codeforcesHandle: base?.codeforcesHandle ?? "",
+    codeforcesFolder: base?.codeforcesFolder ?? "codeforces",
+    ...(base?.codeforcesSince !== undefined ? { codeforcesSince: base.codeforcesSince } : {}),
   };
 }
 

@@ -5,6 +5,8 @@ export interface LanguageInfo {
   extension: string;
   /** Line comment prefix used for the metadata header. */
   comment: string;
+  /** Closing marker for languages without line comments, e.g. OCaml's "*)". */
+  commentEnd?: string;
 }
 
 const PY: LanguageInfo = { key: "python", label: "Python", extension: "py", comment: "#" };
@@ -33,6 +35,11 @@ const LANGUAGES: Record<string, LanguageInfo> = {
   erlang: { key: "erlang", label: "Erlang", extension: "erl", comment: "%" },
   elixir: { key: "elixir", label: "Elixir", extension: "ex", comment: "#" },
   bash: { key: "bash", label: "Bash", extension: "sh", comment: "#" },
+  haskell: { key: "haskell", label: "Haskell", extension: "hs", comment: "--" },
+  ocaml: { key: "ocaml", label: "OCaml", extension: "ml", comment: "(*", commentEnd: "*)" },
+  pascal: { key: "pascal", label: "Pascal", extension: "pas", comment: "//" },
+  perl: { key: "perl", label: "Perl", extension: "pl", comment: "#" },
+  d: { key: "d", label: "D", extension: "d", comment: "//" },
   mysql: SQL,
   mssql: SQL,
   oraclesql: SQL,
@@ -62,4 +69,37 @@ export function getLanguage(langSlug: string): LanguageInfo {
 
 export function isKnownLanguage(langSlug: string): boolean {
   return Object.prototype.hasOwnProperty.call(LANGUAGES, langSlug.trim().toLowerCase());
+}
+
+/**
+ * Maps a Codeforces `programmingLanguage` string (e.g. "C++17 (GCC 7-32)",
+ * "PyPy 3-64", "Java 21") to the language slugs used above.
+ */
+export function codeforcesLangSlug(programmingLanguage: string): string {
+  const l = programmingLanguage.toLowerCase();
+  const rules: Array<[RegExp, string]> = [
+    [/c\+\+|g\+\+|clang\+\+/, "cpp"],
+    [/c#|mono|\.net/, "csharp"],
+    [/pypy 2|python 2/, "python"],
+    [/pypy|python/, "python3"],
+    [/kotlin/, "kotlin"],
+    [/java(?!script)/, "java"],
+    [/typescript/, "typescript"],
+    [/javascript|node\.js|\bv8\b/, "javascript"],
+    [/rust/, "rust"],
+    [/^go\b|golang/, "golang"],
+    [/ruby/, "ruby"],
+    [/scala/, "scala"],
+    [/php/, "php"],
+    [/haskell/, "haskell"],
+    [/ocaml/, "ocaml"],
+    [/pascal|delphi/, "pascal"],
+    [/perl/, "perl"],
+    [/swift/, "swift"],
+    [/dart/, "dart"],
+    [/^d\b|\bdmd\b|\bldc\b/, "d"],
+    [/gnu c\b|gnu c11|^c11|^c\b|\bc \(/, "c"],
+  ];
+  for (const [re, slug] of rules) if (re.test(l)) return slug;
+  return l.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "other";
 }

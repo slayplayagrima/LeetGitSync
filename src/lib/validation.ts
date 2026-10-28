@@ -12,6 +12,10 @@ export function isValidSubmissionId(id: unknown): id is string {
   return typeof id === "string" && /^\d{1,20}$/.test(id);
 }
 
+export function isValidCodeforcesHandle(handle: unknown): handle is string {
+  return typeof handle === "string" && /^[A-Za-z0-9_.-]{3,24}$/.test(handle);
+}
+
 export function isValidSlug(slug: unknown): slug is string {
   return typeof slug === "string" && SLUG_RE.test(slug);
 }
@@ -43,6 +47,13 @@ export function validateSettings(s: Settings): SettingsErrors {
       errors.languageFolders = `The folder for "${key}" is empty or contains characters that are not allowed.`;
       break;
     }
+  }
+  if (s.codeforcesHandle !== "" && !isValidCodeforcesHandle(s.codeforcesHandle)) {
+    errors.codeforcesHandle = "Use your Codeforces handle (3–24 letters, digits, '_', '-' or '.').";
+  }
+  const cfFolder = cleanFolder(s.codeforcesFolder);
+  if (cfFolder === "" || !isSafeFolder(cfFolder)) {
+    errors.codeforcesFolder = "Use a folder name made of letters, numbers, '.', '-' or '_'.";
   }
   if (!(["auto", "manual"] as SyncMode[]).includes(s.syncMode)) errors.syncMode = "Unknown sync mode.";
   if (!(["update", "separate"] as HistoryPolicy[]).includes(s.historyPolicy)) errors.historyPolicy = "Unknown policy.";

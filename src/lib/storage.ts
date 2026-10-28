@@ -18,6 +18,9 @@ export const DEFAULT_SETTINGS: Settings = {
   languageFolders: {},
   includeHeader: true,
   metadataSidecar: false,
+  codeforcesEnabled: false,
+  codeforcesHandle: "",
+  codeforcesFolder: "codeforces",
 };
 
 const KEYS = {

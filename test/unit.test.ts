@@ -4,12 +4,13 @@ import { backoffDelay, isRetryable, mapGitHubError, SyncError, toErrorInfo } fro
 import { buildHeader, buildMetadataJson, buildSolutionFile, extractCode, hasSameCode } from "../src/lib/file-content";
 import { buildBaseName, buildPaths, formatProblemNumber, isSafeFolder, normalizeTitle } from "../src/lib/filename";
 import { decodeBase64Utf8, encodeBase64Utf8 } from "../src/lib/github-client";
-import { getLanguage, isKnownLanguage } from "../src/lib/languages";
+import { codeforcesLangSlug, getLanguage, isKnownLanguage } from "../src/lib/languages";
 import { readCsrfCookie } from "../src/lib/leetcode-client";
 import { redact } from "../src/lib/redact";
 import { DEFAULT_SETTINGS } from "../src/lib/storage";
 import {
   isValidBranch,
+  isValidCodeforcesHandle,
   parseCheckPayload,
   parseQuestion,
   parseSubmissionDetails,
@@ -94,6 +95,43 @@ describe("language mapping", () => {
   it("keeps unknown languages instead of dropping them", () => {
     expect(isKnownLanguage("cobol")).toBe(false);
     expect(getLanguage("Cobol")).toMatchObject({ key: "cobol", extension: "txt" });
+  });
+});
+
+describe("Codeforces language mapping", () => {
+  it("maps Codeforces compiler names to language slugs", () => {
+    const cases: Array<[string, string]> = [
+      ["C++17 (GCC 7-32)", "cpp"],
+      ["C++20 (GCC 13-64)", "cpp"],
+      ["GNU G++17 7.3.0", "cpp"],
+      ["Clang++20 Diagnostics", "cpp"],
+      ["GNU C11", "c"],
+      ["Python 3", "python3"],
+      ["PyPy 3-64", "python3"],
+      ["Python 2", "python"],
+      ["Java 21", "java"],
+      ["Kotlin 1.9", "kotlin"],
+      ["JavaScript V8 4.8.0", "javascript"],
+      ["Node.js 15.8.0 (64bit)", "javascript"],
+      ["C# 10, .NET SDK 6.0", "csharp"],
+      ["Rust 2021", "rust"],
+      ["Go 1.22.2", "golang"],
+      ["Haskell GHC 8.10.1", "haskell"],
+      ["Free Pascal 3.2.2", "pascal"],
+    ];
+    for (const [name, slug] of cases) expect(codeforcesLangSlug(name), name).toBe(slug);
+  });
+  it("keeps unknown compilers under their own name", () => {
+    expect(codeforcesLangSlug("Brainf**k")).toBe("brainf-k");
+    expect(getLanguage(codeforcesLangSlug("Brainf**k")).extension).toBe("txt");
+  });
+  it("validates handles and Codeforces settings", () => {
+    expect(isValidCodeforcesHandle("tourist")).toBe(true);
+    expect(isValidCodeforcesHandle("a b")).toBe(false);
+    expect(isValidCodeforcesHandle("ab")).toBe(false);
+    expect(validateSettings({ ...DEFAULT_SETTINGS, codeforcesHandle: "bad handle!" })).toHaveProperty("codeforcesHandle");
+    expect(validateSettings({ ...DEFAULT_SETTINGS, codeforcesFolder: "../x" })).toHaveProperty("codeforcesFolder");
+    expect(DEFAULT_SETTINGS).toMatchObject({ codeforcesEnabled: false, codeforcesHandle: "", codeforcesFolder: "codeforces" });
   });
 });
 
