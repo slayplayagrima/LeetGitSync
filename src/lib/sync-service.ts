@@ -1,5 +1,6 @@
 import type {
   ConnectionState,
+  Platform,
   PublicRecord,
   PublicState,
   Settings,
@@ -7,6 +8,7 @@ import type {
   SyncErrorInfo,
   SyncRecord,
 } from "../types";
+import { isCodeforcesRecordId } from "./codeforces";
 import { decideOnDetection, findSyncedDuplicate, sha256Hex } from "./deduplication";
 import { backoffDelay, MAX_ATTEMPTS, SyncError, toErrorInfo } from "./errors";
 import { buildMetadataJson, buildSolutionFile, hasSameCode } from "./file-content";
@@ -102,6 +104,36 @@ export class SyncService {
     });
   }
 
+  /**
+   * An accepted Codeforces submission was seen in the user's recent submissions.
+   * It is recorded once (keyed by "cf-<id>"); reading its code comes later.
+   */
+  async reportCodeforcesDetected(input: {
+    submissionId: string;
+    titleSlug: string;
+    title: string;
+    frontendId: string;
+  }): Promise<{ created: boolean }> {
+    if (!isCodeforcesRecordId(input.submissionId) || !isValidSlug(input.titleSlug)) return { created: false };
+    const now = this.#now();
+    return this.#store.updateRecords((records) => {
+      if (records[input.submissionId]) return { created: false };
+      records[input.submissionId] = {
+        platform: "codeforces",
+        submissionId: input.submissionId,
+        titleSlug: input.titleSlug,
+        title: input.title.slice(0, 200),
+        frontendId: input.frontendId.slice(0, 20),
+        status: "detected",
+        source: "auto",
+        detectedAt: now,
+        updatedAt: now,
+        attempts: 0,
+      };
+      return { created: true };
+    });
+  }
+
   /** The content script fetched (or failed to fetch) details for a waiting submission. */
   async reportDetails(
     submissionId: string,
@@ -162,9 +194,10 @@ export class SyncService {
   }
 
   /** Submissions whose details still need to be read from a LeetCode tab (e.g. after a reload). */
-  async pendingDetailRequests(): Promise<Array<{ submissionId: string; titleSlug: string }>> {
+  async pendingDetailRequests(platform: Platform = "leetcode"): Promise<Array<{ submissionId: string; titleSlug: string }>> {
     const records = await this.#store.getRecords();
     return Object.values(records)
+      .filter((r) => (r.platform ?? "leetcode") === platform)
       .filter((r) => r.status === "waiting_details" || r.status === "detected")
       .map((r) => ({ submissionId: r.submissionId, titleSlug: r.titleSlug }));
   }

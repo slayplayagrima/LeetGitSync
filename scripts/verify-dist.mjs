@@ -36,8 +36,8 @@ if (hosts.length !== 1 || hosts[0] !== "https://api.github.com/*") {
   problems.push(`Unexpected host permissions: ${hosts.join(", ")}`);
 }
 for (const cs of manifest.content_scripts) {
-  if (cs.matches.some((m) => m !== "https://leetcode.com/*")) {
-    problems.push(`Content script matches more than leetcode.com: ${cs.matches.join(", ")}`);
+  if (cs.matches.some((m) => m !== "https://leetcode.com/*" && m !== "https://codeforces.com/*")) {
+    problems.push(`Content script matches more than leetcode.com and codeforces.com: ${cs.matches.join(", ")}`);
   }
 }
 if (manifest.optional_permissions || manifest.optional_host_permissions) {

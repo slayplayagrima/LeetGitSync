@@ -38,6 +38,11 @@
       "matches": ["https://leetcode.com/*"],
       "js": ["content/leetcode-content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://codeforces.com/*"],
+      "js": ["content/codeforces-content.js"],
+      "run_at": "document_idle"
     }
   ],
   "content_security_policy": {

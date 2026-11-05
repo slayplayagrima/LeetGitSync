@@ -1,12 +1,13 @@
 import { toErrorInfo } from "../lib/errors";
 import { log } from "../lib/log";
-import type { ContentToWorker, PageToWorker, ToContent, WorkerMessage } from "../lib/messages";
+import type { CodeforcesConfig, CodeforcesToWorker, ContentToWorker, PageToWorker, ToContent, WorkerMessage } from "../lib/messages";
 import { applyCodeforcesToggle, chromeLocalStore, StateStore } from "../lib/storage";
 import { SyncService, type SyncEvent } from "../lib/sync-service";
 import { isValidSubmissionId, validateSettings } from "../lib/validation";
 import type { Settings } from "../types";
 
 const LEETCODE_ORIGIN = "https://leetcode.com";
+const CODEFORCES_ORIGIN = "https://codeforces.com";
 const RETRY_ALARM = "leetgitsync-retry";
 const TAB_KEY = "leetcodeTabs";
 const SUBMISSION_TAB_KEY = "submissionTabs";
@@ -116,12 +117,38 @@ async function handleEvent(event: SyncEvent): Promise<void> {
 
 // ------------------------------------------------------------------ messages
 
-function isFromLeetCode(sender: chrome.runtime.MessageSender): boolean {
+function isFromOrigin(sender: chrome.runtime.MessageSender, origin: string): boolean {
   if (sender.id !== chrome.runtime.id || sender.tab?.id === undefined || !sender.url) return false;
   try {
-    return new URL(sender.url).origin === LEETCODE_ORIGIN;
+    return new URL(sender.url).origin === origin;
   } catch {
     return false;
+  }
+}
+
+const isFromLeetCode = (sender: chrome.runtime.MessageSender) => isFromOrigin(sender, LEETCODE_ORIGIN);
+const isFromCodeforces = (sender: chrome.runtime.MessageSender) => isFromOrigin(sender, CODEFORCES_ORIGIN);
+
+async function handleCodeforces(msg: CodeforcesToWorker): Promise<unknown> {
+  switch (msg.type) {
+    case "codeforces:hello": {
+      const s = await store.getSettings();
+      const config: CodeforcesConfig = { enabled: s.codeforcesEnabled, handle: s.codeforcesHandle };
+      if (s.codeforcesSince !== undefined) config.sinceMs = s.codeforcesSince;
+      return { ok: true, data: config };
+    }
+    case "codeforces:detected": {
+      const s = await store.getSettings();
+      if (!s.codeforcesEnabled) return { ok: false, error: "Codeforces sync is off." };
+      const res = await service.reportCodeforcesDetected({
+        submissionId: String(msg.submissionId),
+        titleSlug: String(msg.titleSlug),
+        title: String(msg.title),
+        frontendId: String(msg.frontendId),
+      });
+      await updateBadge();
+      return { ok: true, data: res };
+    }
   }
 }
 
@@ -209,6 +236,7 @@ async function handlePage(msg: PageToWorker): Promise<unknown> {
 }
 
 const CONTENT_TYPES = new Set(["content:hello", "submission:accepted", "submission:details"]);
+const CODEFORCES_TYPES = new Set(["codeforces:hello", "codeforces:detected"]);
 
 chrome.runtime.onMessage.addListener((raw: unknown, sender, sendResponse) => {
   const msg = raw as WorkerMessage;
@@ -218,6 +246,9 @@ chrome.runtime.onMessage.addListener((raw: unknown, sender, sendResponse) => {
   if (CONTENT_TYPES.has(msg.type)) {
     if (!isFromLeetCode(sender)) return false;
     work = handleContent(msg as ContentToWorker, sender.tab!.id!);
+  } else if (CODEFORCES_TYPES.has(msg.type)) {
+    if (!isFromCodeforces(sender)) return false;
+    work = handleCodeforces(msg as CodeforcesToWorker);
   } else if (isFromExtensionPage(sender)) {
     work = handlePage(msg as PageToWorker);
   } else {

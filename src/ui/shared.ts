@@ -20,6 +20,8 @@ export type Tone = "success" | "warning" | "danger" | "info" | "neutral";
 export function statusLabel(r: PublicRecord, manualMode: boolean): { label: string; tone: Tone } {
   switch (r.status) {
     case "detected":
+      if (r.platform === "codeforces") return { label: "Detected", tone: "info" };
+      return { label: "Reading submission", tone: "info" };
     case "waiting_details":
       return { label: "Reading submission", tone: "info" };
     case "ready":
@@ -48,6 +50,11 @@ export function statusLabel(r: PublicRecord, manualMode: boolean): { label: stri
       return { label: labels[r.error?.code ?? ""] ?? "Sync failed", tone: "danger" };
     }
   }
+}
+
+/** Submission id as shown to the user, e.g. "Codeforces #396447161" or "#1234". */
+export function submissionLabel(r: Pick<PublicRecord, "platform" | "submissionId">): string {
+  return r.platform === "codeforces" ? `Codeforces #${r.submissionId.replace(/^cf-/, "")}` : `#${r.submissionId}`;
 }
 
 export function problemLabel(r: Pick<PublicRecord, "frontendId" | "title" | "titleSlug">): string {

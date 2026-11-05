@@ -8,6 +8,7 @@ import {
   loadState,
   problemLabel,
   relativeTime,
+  submissionLabel,
   repoUrl,
   statusLabel,
 } from "../ui/shared";
@@ -112,7 +113,7 @@ function latestCard(s: PublicState): HTMLElement {
     el("div", { className: "title-line" }, el("span", { className: "problem", text: problemLabel(r) }), chip(label, tone)),
     el("p", {
       className: "detail muted",
-      text: [r.langName, `#${r.submissionId}`, relativeTime(r.updatedAt)].filter(Boolean).join(" · "),
+      text: [r.langName, submissionLabel(r), relativeTime(r.updatedAt)].filter(Boolean).join(" · "),
     }),
   );
   if (r.status === "synced" && r.path) card.append(el("p", { className: "detail mono", text: r.path }));

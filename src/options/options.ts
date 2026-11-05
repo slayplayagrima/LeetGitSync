@@ -2,7 +2,7 @@ import { buildPaths } from "../lib/filename";
 import { DEFAULT_FOLDER_KEYS, folderKeyLabel } from "../lib/languages";
 import type { SettingsErrors } from "../lib/validation";
 import type { ConnectionState, FilenameStyle, HistoryPolicy, PublicState, Settings, SyncMode } from "../types";
-import { callWorker, chip, el, fileUrl, loadState, problemLabel, relativeTime, statusLabel } from "../ui/shared";
+import { callWorker, chip, el, fileUrl, loadState, problemLabel, relativeTime, statusLabel, submissionLabel } from "../ui/shared";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -163,7 +163,7 @@ function renderHistory(s: PublicState): void {
   }
   for (const r of s.records) {
     const { label, tone } = statusLabel(r, s.settings.syncMode === "manual");
-    const problem = el("td", {}, el("span", { text: problemLabel(r) }), el("span", { className: "sub", text: `#${r.submissionId}` }));
+    const problem = el("td", {}, el("span", { text: problemLabel(r) }), el("span", { className: "sub", text: submissionLabel(r) }));
     if (r.path) problem.append(el("span", { className: "sub mono", text: r.path }));
     if (r.error) problem.append(el("span", { className: "err", text: r.error.message }));
     if (r.warning) problem.append(el("span", { className: "warn", text: r.warning }));

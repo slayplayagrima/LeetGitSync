@@ -11,6 +11,7 @@ const entries = {
   "background/service-worker": "src/background/service-worker.ts",
   "content/page-hook": "src/content/page-hook.ts",
   "content/leetcode-content": "src/content/leetcode-content.ts",
+  "content/codeforces-content": "src/content/codeforces-content.ts",
   "popup/popup": "src/popup/popup.ts",
   "options/options": "src/options/options.ts",
 };
