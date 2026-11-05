@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CodeforcesWatcher,
+  decodeHtmlEntities,
+  extractSourceFromHtml,
+  submissionPagePath,
+  toSubmissionDetails,
   MAX_POLLS,
   codeforcesProblemNumber,
   codeforcesRecordId,
@@ -14,6 +18,8 @@ import {
 } from "../src/lib/codeforces";
 import { MemoryStore, StateStore } from "../src/lib/storage";
 import { SyncService } from "../src/lib/sync-service";
+import { codeforcesLangSlug } from "../src/lib/languages";
+import { FakeGitHub } from "./fake-github";
 
 const SINCE = 1_700_000_000_000;
 const AFTER = SINCE / 1000 + 60;
@@ -179,16 +185,17 @@ describe("recording detected Codeforces submissions", () => {
 
   it("records a submission once, separate from LeetCode", async () => {
     const { store, svc } = await service();
-    expect(await svc.reportCodeforcesDetected(input)).toEqual({ created: true });
-    expect(await svc.reportCodeforcesDetected(input)).toEqual({ created: false });
+    expect(await svc.reportCodeforcesDetected(input)).toEqual({ created: true, needDetails: true });
+    // Seen again before its code was read: still one record, and it asks for the code again.
+    expect(await svc.reportCodeforcesDetected(input)).toEqual({ created: false, needDetails: true });
     const records = await store.getRecords();
     expect(Object.keys(records)).toEqual(["cf-396447161"]);
-    expect(records["cf-396447161"]).toMatchObject({ platform: "codeforces", status: "detected", frontendId: "1850D" });
+    expect(records["cf-396447161"]).toMatchObject({ platform: "codeforces", status: "waiting_details", frontendId: "1850D" });
   });
 
   it("rejects ids that are not Codeforces ids", async () => {
     const { svc } = await service();
-    expect(await svc.reportCodeforcesDetected({ ...input, submissionId: "12345" })).toEqual({ created: false });
+    expect(await svc.reportCodeforcesDetected({ ...input, submissionId: "12345" })).toEqual({ created: false, needDetails: false });
   });
 
   it("does not hand Codeforces submissions to LeetCode tabs", async () => {
@@ -197,5 +204,93 @@ describe("recording detected Codeforces submissions", () => {
     await svc.reportAccepted({ submissionId: "555", titleSlug: "two-sum", source: "auto" });
     expect((await svc.pendingDetailRequests()).map((p) => p.submissionId)).toEqual(["555"]);
     expect((await svc.pendingDetailRequests("codeforces")).map((p) => p.submissionId)).toEqual(["cf-396447161"]);
+  });
+});
+
+const CODE = '#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    string s = "a&b";\n    cout << (1 < 2 && 3 > 2) << \'\\n\';\n}\n';
+
+function escape(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/** Mirrors the structure of a Codeforces submission page (trimmed). */
+function page(id: number, body: string): string {
+  return `<!DOCTYPE html><html><head><title>Submission #${id} - Codeforces</title></head><body>
+<div class="datatable"><table><tr><th>#</th></tr><tr><td><a href="/contest/1850/submission/${id}">${id}</a></td></tr></table></div>
+<pre id="program-source-text" class="prettyprint lang-cpp linenums program-source" style="padding: 0.5em;">${body}</pre>
+</body></html>`;
+}
+
+describe("reading Codeforces source code", () => {
+  it("builds the submission page path for contests and gyms", () => {
+    expect(submissionPagePath(1850, 202)).toBe("/contest/1850/submission/202");
+    expect(submissionPagePath(104000, 7)).toBe("/gym/104000/submission/7");
+  });
+  it("decodes HTML entities", () => {
+    expect(decodeHtmlEntities("a &lt;b&gt; &amp; &quot;c&quot; &#39;d&#39; &#x41;")).toBe(`a <b> & "c" 'd' A`);
+    expect(decodeHtmlEntities("&unknown;")).toBe("&unknown;");
+  });
+  it("recovers the exact code from the page", () => {
+    expect(extractSourceFromHtml(page(202, escape(CODE)), 202)).toEqual({ ok: true, code: CODE });
+  });
+  it("normalizes Windows line endings only", () => {
+    const res = extractSourceFromHtml(page(202, escape("a\r\nb\r\n")), 202);
+    expect(res).toEqual({ ok: true, code: "a\nb\n" });
+  });
+  it("refuses Cloudflare pages, missing code, wrong pages and changed formats", () => {
+    expect(extractSourceFromHtml("<html><head><title>Just a moment...</title></head></html>", 202).ok).toBe(false);
+    expect(extractSourceFromHtml("<html><body>Login required</body></html>", 202).ok).toBe(false);
+    expect(extractSourceFromHtml(page(999, escape(CODE)), 202).ok).toBe(false);
+    expect(extractSourceFromHtml(page(202, "<ol><li>int x;</li></ol>"), 202).ok).toBe(false);
+    expect(extractSourceFromHtml(page(202, "   "), 202).ok).toBe(false);
+  });
+  it("combines API metadata and code into submission details", () => {
+    const [s] = parseUserStatus(ok(sub(202, "OK")))!;
+    expect(toSubmissionDetails(s!, CODE, codeforcesLangSlug(s!.programmingLanguage))).toEqual({
+      platform: "codeforces",
+      submissionId: "cf-202",
+      code: CODE,
+      langSlug: "cpp",
+      langName: "C++17 (GCC 7-32)",
+      timestamp: AFTER,
+      statusCode: 10,
+      titleSlug: "1850-d",
+      frontendId: "1850D",
+      title: "Balanced Round",
+      contestId: 1850,
+      runtime: "93 ms",
+      memory: "1.6 MB",
+      rating: 900,
+    });
+  });
+});
+
+describe("Codeforces code is kept locally until GitHub saving is added", () => {
+  it("stores the code but makes no GitHub requests", async () => {
+    const gh = new FakeGitHub();
+    const store = new StateStore(new MemoryStore());
+    await store.saveSettings({ ...(await store.getSettings()), owner: gh.owner, repo: gh.repo, codeforcesEnabled: true });
+    await store.setToken(gh.token);
+    const svc = new SyncService({ store, fetch: gh.fetch, now: () => SINCE });
+    await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" });
+    const [s] = parseUserStatus(ok(sub(202, "OK")))!;
+    await svc.reportDetails("cf-202", { ok: true, details: toSubmissionDetails(s!, CODE, "cpp") });
+    const record = (await store.getRecords())["cf-202"]!;
+    expect(record.status).toBe("ready");
+    expect(record.details?.code).toBe(CODE);
+    expect(gh.requests).toHaveLength(0);
+    // Detected again later: nothing new is needed.
+    expect(await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "x", frontendId: "1850D" })).toEqual({
+      created: false,
+      needDetails: false,
+    });
+  });
+
+  it("marks unreadable code for review instead of guessing", async () => {
+    const store = new StateStore(new MemoryStore());
+    const svc = new SyncService({ store, now: () => SINCE });
+    await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" });
+    await svc.reportDetails("cf-202", { ok: false, error: { code: "details_unavailable", message: "security check", retryable: false } });
+    expect((await store.getRecords())["cf-202"]).toMatchObject({ status: "needs_review", error: { code: "details_unavailable" } });
   });
 });

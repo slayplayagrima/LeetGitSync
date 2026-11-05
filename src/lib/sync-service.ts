@@ -106,31 +106,42 @@ export class SyncService {
 
   /**
    * An accepted Codeforces submission was seen in the user's recent submissions.
-   * It is recorded once (keyed by "cf-<id>"); reading its code comes later.
+   * It is recorded once (keyed by "cf-<id>"); the content script then reads its code.
    */
   async reportCodeforcesDetected(input: {
     submissionId: string;
     titleSlug: string;
     title: string;
     frontendId: string;
-  }): Promise<{ created: boolean }> {
-    if (!isCodeforcesRecordId(input.submissionId) || !isValidSlug(input.titleSlug)) return { created: false };
+  }): Promise<{ created: boolean; needDetails: boolean }> {
+    if (!isCodeforcesRecordId(input.submissionId) || !isValidSlug(input.titleSlug)) {
+      return { created: false, needDetails: false };
+    }
     const now = this.#now();
     return this.#store.updateRecords((records) => {
-      if (records[input.submissionId]) return { created: false };
+      const existing = records[input.submissionId];
+      if (existing) {
+        // Still missing its code (e.g. the tab closed before it was read): read it again.
+        const needDetails = existing.status === "detected" || existing.status === "waiting_details";
+        if (needDetails) {
+          existing.status = "waiting_details";
+          existing.updatedAt = now;
+        }
+        return { created: false, needDetails };
+      }
       records[input.submissionId] = {
         platform: "codeforces",
         submissionId: input.submissionId,
         titleSlug: input.titleSlug,
         title: input.title.slice(0, 200),
         frontendId: input.frontendId.slice(0, 20),
-        status: "detected",
+        status: "waiting_details",
         source: "auto",
         detectedAt: now,
         updatedAt: now,
         attempts: 0,
       };
-      return { created: true };
+      return { created: true, needDetails: true };
     });
   }
 
@@ -252,6 +263,8 @@ export class SyncService {
 
   #isDue(r: SyncRecord, settings: Settings, now: number): boolean {
     if (!r.details) return false;
+    // Codeforces solutions are held locally until their GitHub file layout is in place.
+    if (r.platform === "codeforces") return false;
     const approved = settings.syncMode === "auto" || r.userApproved === true;
     if (r.status === "ready") return approved;
     if (r.status === "failed") return approved && r.error?.retryable === true && r.nextAttemptAt !== undefined && r.nextAttemptAt <= now;

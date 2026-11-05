@@ -25,6 +25,7 @@ export function statusLabel(r: PublicRecord, manualMode: boolean): { label: stri
     case "waiting_details":
       return { label: "Reading submission", tone: "info" };
     case "ready":
+      if (r.platform === "codeforces") return { label: "Code read", tone: "info" };
       return manualMode && !r.userApproved ? { label: "Ready to sync", tone: "warning" } : { label: "Queued", tone: "info" };
     case "syncing":
       return { label: "Syncing solution", tone: "info" };

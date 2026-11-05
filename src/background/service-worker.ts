@@ -1,3 +1,4 @@
+import { isCodeforcesRecordId } from "../lib/codeforces";
 import { toErrorInfo } from "../lib/errors";
 import { log } from "../lib/log";
 import type { CodeforcesConfig, CodeforcesToWorker, ContentToWorker, PageToWorker, ToContent, WorkerMessage } from "../lib/messages";
@@ -149,6 +150,15 @@ async function handleCodeforces(msg: CodeforcesToWorker): Promise<unknown> {
       await updateBadge();
       return { ok: true, data: res };
     }
+    case "codeforces:details": {
+      if (!isCodeforcesRecordId(msg.submissionId)) return { ok: false, error: "Invalid submission id." };
+      if (msg.result.ok && msg.result.details.platform !== "codeforces") {
+        return { ok: false, error: "Details are not from Codeforces." };
+      }
+      await service.reportDetails(msg.submissionId, msg.result);
+      await updateBadge();
+      return { ok: true, data: undefined };
+    }
   }
 }
 
@@ -236,7 +246,7 @@ async function handlePage(msg: PageToWorker): Promise<unknown> {
 }
 
 const CONTENT_TYPES = new Set(["content:hello", "submission:accepted", "submission:details"]);
-const CODEFORCES_TYPES = new Set(["codeforces:hello", "codeforces:detected"]);
+const CODEFORCES_TYPES = new Set(["codeforces:hello", "codeforces:detected", "codeforces:details"]);
 
 chrome.runtime.onMessage.addListener((raw: unknown, sender, sendResponse) => {
   const msg = raw as WorkerMessage;

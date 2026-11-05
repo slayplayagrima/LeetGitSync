@@ -14,7 +14,12 @@ export type ContentToWorker =
 /** Messages a codeforces.com content script may send to the service worker. */
 export type CodeforcesToWorker =
   | { type: "codeforces:hello" }
-  | { type: "codeforces:detected"; submissionId: string; titleSlug: string; title: string; frontendId: string };
+  | { type: "codeforces:detected"; submissionId: string; titleSlug: string; title: string; frontendId: string }
+  | {
+      type: "codeforces:details";
+      submissionId: string;
+      result: { ok: true; details: SubmissionDetails } | { ok: false; error: SyncErrorInfo };
+    };
 
 export interface CodeforcesConfig {
   enabled: boolean;

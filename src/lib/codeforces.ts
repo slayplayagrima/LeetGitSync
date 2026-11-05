@@ -6,7 +6,8 @@
  * still being judged, well under the API's limit of one call per two seconds.
  */
 
-import { isValidCodeforcesHandle } from "./validation";
+import type { SubmissionDetails } from "../types";
+import { ACCEPTED_STATUS_CODE, isValidCodeforcesHandle } from "./validation";
 
 export interface CodeforcesSubmission {
   id: number;
@@ -188,4 +189,86 @@ export class CodeforcesWatcher {
       this.#deps.schedule(() => void this.check(), POLL_INTERVAL_MS);
     }
   }
+}
+
+// ---------------------------------------------------------------- source code
+
+/**
+ * The submission page is the only place Codeforces exposes source code; the
+ * API does not. The code sits in <pre id="program-source-text"> as escaped
+ * text (syntax highlighting is applied later in the browser), so it can be
+ * read from the raw HTML without running the page.
+ */
+export function submissionPagePath(contestId: number, id: number | string): string {
+  const section = contestId >= 100000 ? "gym" : "contest";
+  return `/${section}/${contestId}/submission/${id}`;
+}
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+export function decodeHtmlEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => {
+    if (body[0] === "#") {
+      const code = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+    }
+    return ENTITIES[body.toLowerCase()] ?? match;
+  });
+}
+
+export type SourceResult = { ok: true; code: string } | { ok: false; reason: string };
+
+/** Extracts the submitted code from a Codeforces submission page's HTML. */
+export function extractSourceFromHtml(html: string, submissionId: number | string): SourceResult {
+  if (/<title>\s*Just a moment/i.test(html) || html.includes("challenge-platform")) {
+    return {
+      ok: false,
+      reason: "Codeforces showed a security check instead of the submission. Open codeforces.com, complete the check, then reload the page.",
+    };
+  }
+  const match = /<pre[^>]*\bid=["']program-source-text["'][^>]*>([\s\S]*?)<\/pre>/i.exec(html);
+  if (!match) {
+    return {
+      ok: false,
+      reason: "The submission page did not include the source code. Make sure you are signed in on codeforces.com as the author.",
+    };
+  }
+  if (!html.includes(String(submissionId))) {
+    return { ok: false, reason: "Codeforces returned a page for a different submission." };
+  }
+  const raw = match[1] ?? "";
+  if (/<[a-z]/i.test(raw)) {
+    // Markup inside the code block means the page format changed; do not guess.
+    return { ok: false, reason: "The submission page format has changed, so the code could not be read safely." };
+  }
+  const code = decodeHtmlEntities(raw).replace(/\r\n/g, "\n");
+  if (code.trim() === "") return { ok: false, reason: "The submission page showed empty source code." };
+  return { ok: true, code };
+}
+
+function formatMemory(bytes: number): string {
+  return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+}
+
+/** Combines API metadata with the code read from the page into the shared details shape. */
+export function toSubmissionDetails(sub: CodeforcesSubmission, code: string, langSlug: string): SubmissionDetails {
+  const contestId = sub.contestId as number;
+  const details: SubmissionDetails = {
+    platform: "codeforces",
+    submissionId: codeforcesRecordId(sub.id),
+    code,
+    langSlug,
+    langName: sub.programmingLanguage,
+    timestamp: sub.creationTimeSeconds,
+    // Only "OK" verdicts reach this point; reuse the shared "accepted" status code.
+    statusCode: sub.verdict === "OK" ? ACCEPTED_STATUS_CODE : -1,
+    titleSlug: codeforcesSlug(contestId, sub.problem.index),
+    frontendId: codeforcesProblemNumber(contestId, sub.problem.index),
+    title: sub.problem.name,
+    contestId,
+  };
+  if (sub.timeConsumedMillis !== undefined) details.runtime = `${sub.timeConsumedMillis} ms`;
+  if (sub.memoryConsumedBytes !== undefined) details.memory = formatMemory(sub.memoryConsumedBytes);
+  if (sub.problem.rating !== undefined) details.rating = sub.problem.rating;
+  return details;
 }
