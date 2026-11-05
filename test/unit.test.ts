@@ -7,7 +7,7 @@ import { decodeBase64Utf8, encodeBase64Utf8 } from "../src/lib/github-client";
 import { codeforcesLangSlug, getLanguage, isKnownLanguage } from "../src/lib/languages";
 import { readCsrfCookie } from "../src/lib/leetcode-client";
 import { redact } from "../src/lib/redact";
-import { DEFAULT_SETTINGS } from "../src/lib/storage";
+import { applyCodeforcesToggle, DEFAULT_SETTINGS } from "../src/lib/storage";
 import {
   isValidBranch,
   isValidCodeforcesHandle,
@@ -132,6 +132,24 @@ describe("Codeforces language mapping", () => {
     expect(validateSettings({ ...DEFAULT_SETTINGS, codeforcesHandle: "bad handle!" })).toHaveProperty("codeforcesHandle");
     expect(validateSettings({ ...DEFAULT_SETTINGS, codeforcesFolder: "../x" })).toHaveProperty("codeforcesFolder");
     expect(DEFAULT_SETTINGS).toMatchObject({ codeforcesEnabled: false, codeforcesHandle: "", codeforcesFolder: "codeforces" });
+  });
+});
+
+describe("Codeforces on/off", () => {
+  const off = { ...DEFAULT_SETTINGS };
+  const on = { ...DEFAULT_SETTINGS, codeforcesEnabled: true };
+  it("records when it was turned on", () => {
+    expect(applyCodeforcesToggle(off, on, 1000).codeforcesSince).toBe(1000);
+  });
+  it("keeps the original time while it stays on", () => {
+    const first = applyCodeforcesToggle(off, on, 1000);
+    expect(applyCodeforcesToggle(first, { ...on, codeforcesHandle: "tourist" }, 5000).codeforcesSince).toBe(1000);
+  });
+  it("clears the time when turned off and restarts it when turned on again", () => {
+    const first = applyCodeforcesToggle(off, on, 1000);
+    const disabled = applyCodeforcesToggle(first, { ...first, codeforcesEnabled: false }, 2000);
+    expect(disabled.codeforcesSince).toBeUndefined();
+    expect(applyCodeforcesToggle(disabled, on, 3000).codeforcesSince).toBe(3000);
   });
 });
 

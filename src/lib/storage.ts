@@ -65,6 +65,21 @@ export function mergeSettings(stored: unknown): Settings {
   };
 }
 
+/**
+ * Stamps when Codeforces sync was turned on, so only later submissions are
+ * synced automatically. Turning it off and on again starts a new window.
+ */
+export function applyCodeforcesToggle(previous: Settings, next: Settings, now: number): Settings {
+  if (!next.codeforcesEnabled) {
+    const { codeforcesSince: _drop, ...rest } = next;
+    return rest;
+  }
+  if (previous.codeforcesEnabled && previous.codeforcesSince !== undefined) {
+    return { ...next, codeforcesSince: previous.codeforcesSince };
+  }
+  return { ...next, codeforcesSince: now };
+}
+
 export function pruneRecords(records: Record<string, SyncRecord>, max = MAX_HISTORY): Record<string, SyncRecord> {
   const all = Object.values(records);
   const synced = all.filter((r) => r.status === "synced").sort((a, b) => b.updatedAt - a.updatedAt);

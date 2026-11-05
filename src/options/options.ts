@@ -14,6 +14,9 @@ const inputs = {
   filenameStyle: $<HTMLSelectElement>("filenameStyle"),
   includeHeader: $<HTMLInputElement>("includeHeader"),
   metadataSidecar: $<HTMLInputElement>("metadataSidecar"),
+  codeforcesEnabled: $<HTMLInputElement>("codeforcesEnabled"),
+  codeforcesHandle: $<HTMLInputElement>("codeforcesHandle"),
+  codeforcesFolder: $<HTMLInputElement>("codeforcesFolder"),
 };
 const langFoldersEl = $<HTMLDivElement>("language-folders");
 const pathPreview = $<HTMLElement>("path-preview");
@@ -60,9 +63,9 @@ function readForm(): Settings {
     languageFolders,
     includeHeader: inputs.includeHeader.checked,
     metadataSidecar: inputs.metadataSidecar.checked,
-    codeforcesEnabled: base?.codeforcesEnabled ?? false,
-    codeforcesHandle: base?.codeforcesHandle ?? "",
-    codeforcesFolder: base?.codeforcesFolder ?? "codeforces",
+    codeforcesEnabled: inputs.codeforcesEnabled.checked,
+    codeforcesHandle: inputs.codeforcesHandle.value.trim(),
+    codeforcesFolder: inputs.codeforcesFolder.value.trim(),
     ...(base?.codeforcesSince !== undefined ? { codeforcesSince: base.codeforcesSince } : {}),
   };
 }
@@ -75,6 +78,13 @@ function fillForm(s: Settings): void {
   inputs.filenameStyle.value = s.filenameStyle;
   inputs.includeHeader.checked = s.includeHeader;
   inputs.metadataSidecar.checked = s.metadataSidecar;
+  inputs.codeforcesEnabled.checked = s.codeforcesEnabled;
+  inputs.codeforcesHandle.value = s.codeforcesHandle;
+  inputs.codeforcesFolder.value = s.codeforcesFolder;
+  $("codeforces-since").textContent =
+    s.codeforcesEnabled && s.codeforcesSince
+      ? `On since ${new Date(s.codeforcesSince).toLocaleString()}.`
+      : "Off.";
   setRadio("syncMode", s.syncMode);
   setRadio("historyPolicy", s.historyPolicy);
 

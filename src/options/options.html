@@ -20,6 +20,7 @@
       <a href="#github">GitHub</a>
       <a href="#sync">Sync</a>
       <a href="#files">Files</a>
+      <a href="#codeforces">Codeforces</a>
       <a href="#history">History</a>
       <a href="#setup">Setup guide</a>
       <a href="#privacy">Privacy</a>
@@ -119,6 +120,33 @@
         </details>
 
         <p class="preview">Example path: <code id="path-preview"></code></p>
+      </section>
+
+      <section id="codeforces" class="panel" aria-labelledby="codeforces-h">
+        <h2 id="codeforces-h">Codeforces</h2>
+        <label class="check">
+          <input id="codeforcesEnabled" type="checkbox" />
+          Also save my accepted Codeforces submissions
+        </label>
+        <p id="codeforces-since" class="hint"></p>
+        <div class="grid">
+          <label>
+            <span>Codeforces handle (optional)</span>
+            <input id="codeforcesHandle" autocomplete="off" spellcheck="false" placeholder="Detected from codeforces.com" />
+            <small class="hint">Leave empty to use the account you are signed in with on codeforces.com.</small>
+            <small class="field-error" data-for="codeforcesHandle"></small>
+          </label>
+          <label>
+            <span>Folder</span>
+            <input id="codeforcesFolder" autocomplete="off" spellcheck="false" placeholder="codeforces" />
+            <small class="hint">Codeforces solutions go here, separate from LeetCode files.</small>
+            <small class="field-error" data-for="codeforcesFolder"></small>
+          </label>
+        </div>
+        <p class="hint">
+          Only submissions made after you turn this on are saved automatically, so your past history is not
+          committed all at once. Codeforces syncing is being added step by step and does not run yet.
+        </p>
       </section>
 
       <div class="save-bar">

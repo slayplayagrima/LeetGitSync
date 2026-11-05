@@ -1,7 +1,7 @@
 import { toErrorInfo } from "../lib/errors";
 import { log } from "../lib/log";
 import type { ContentToWorker, PageToWorker, ToContent, WorkerMessage } from "../lib/messages";
-import { chromeLocalStore, StateStore } from "../lib/storage";
+import { applyCodeforcesToggle, chromeLocalStore, StateStore } from "../lib/storage";
 import { SyncService, type SyncEvent } from "../lib/sync-service";
 import { isValidSubmissionId, validateSettings } from "../lib/validation";
 import type { Settings } from "../types";
@@ -171,7 +171,7 @@ async function handlePage(msg: PageToWorker): Promise<unknown> {
       const fieldErrors = validateSettings(msg.settings);
       if (Object.keys(fieldErrors).length) return { ok: false, error: "Some settings are invalid.", fieldErrors };
       const previous = await store.getSettings();
-      await store.saveSettings(msg.settings);
+      await store.saveSettings(applyCodeforcesToggle(previous, msg.settings, Date.now()));
       if (connectionFieldsChanged(previous, msg.settings)) await store.setConnection({ state: "unknown" });
       void service.processQueue().then(updateBadge);
       return { ok: true, data: undefined };
