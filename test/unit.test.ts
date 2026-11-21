@@ -153,6 +153,15 @@ describe("Codeforces on/off", () => {
   });
 });
 
+describe("platform labels", () => {
+  it("tags LeetCode (including older records) and Codeforces", async () => {
+    const { platformInfo } = await import("../src/ui/shared");
+    expect(platformInfo(undefined)).toMatchObject({ short: "LC", label: "LeetCode" });
+    expect(platformInfo("leetcode")).toMatchObject({ short: "LC", label: "LeetCode" });
+    expect(platformInfo("codeforces")).toMatchObject({ short: "CF", label: "Codeforces" });
+  });
+});
+
 describe("file content", () => {
   const py = getLanguage("python3");
   it("adds a header and preserves code exactly", () => {

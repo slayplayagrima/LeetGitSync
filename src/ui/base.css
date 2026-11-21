@@ -137,6 +137,39 @@ a {
 .chip.danger { color: var(--danger); background: var(--danger-bg); border-color: transparent; }
 .chip.info { color: var(--info); background: var(--info-bg); border-color: transparent; }
 
+.platform-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 16px;
+  padding: 0 4px;
+  margin-right: 6px;
+  border-radius: 4px;
+  font: 700 9.5px/1 var(--font);
+  letter-spacing: 0.03em;
+  vertical-align: 1px;
+  flex: none;
+}
+.platform-tag.leetcode {
+  color: #8a5300;
+  background: #fff1d6;
+}
+.platform-tag.codeforces {
+  color: #1d4f91;
+  background: #dbe9fb;
+}
+@media (prefers-color-scheme: dark) {
+  .platform-tag.leetcode {
+    color: #ffb84d;
+    background: rgba(255, 161, 22, 0.16);
+  }
+  .platform-tag.codeforces {
+    color: #79b0f2;
+    background: rgba(56, 139, 253, 0.16);
+  }
+}
+
 .muted {
   color: var(--text-muted);
 }

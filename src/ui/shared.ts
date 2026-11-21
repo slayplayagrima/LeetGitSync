@@ -1,5 +1,5 @@
 import type { PageToWorker, Reply } from "../lib/messages";
-import type { PublicRecord, PublicState } from "../types";
+import type { Platform, PublicRecord, PublicState } from "../types";
 
 export async function callWorker<T>(message: PageToWorker): Promise<Reply<T>> {
   try {
@@ -86,6 +86,25 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   for (const [k, v] of Object.entries(props.attrs ?? {})) node.setAttribute(k, v);
   for (const child of children) if (child) node.append(child);
   return node;
+}
+
+export interface PlatformInfo {
+  short: string;
+  label: string;
+  className: string;
+}
+
+/** Records written before Codeforces support have no platform and are LeetCode. */
+export function platformInfo(platform: Platform | undefined): PlatformInfo {
+  return platform === "codeforces"
+    ? { short: "CF", label: "Codeforces", className: "platform-tag codeforces" }
+    : { short: "LC", label: "LeetCode", className: "platform-tag leetcode" };
+}
+
+/** Small LC / CF tag shown before a problem name. */
+export function platformTag(platform: Platform | undefined): HTMLSpanElement {
+  const info = platformInfo(platform);
+  return el("span", { className: info.className, text: info.short, attrs: { title: info.label, "aria-label": info.label } });
 }
 
 export function chip(label: string, tone: Tone): HTMLSpanElement {

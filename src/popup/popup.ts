@@ -6,6 +6,7 @@ import {
   el,
   fileUrl,
   loadState,
+  platformTag,
   problemLabel,
   relativeTime,
   submissionLabel,
@@ -110,7 +111,7 @@ function latestCard(s: PublicState): HTMLElement {
   }
   const { label, tone } = statusLabel(r, s.settings.syncMode === "manual");
   card.append(
-    el("div", { className: "title-line" }, el("span", { className: "problem", text: problemLabel(r) }), chip(label, tone)),
+    el("div", { className: "title-line" }, el("span", { className: "problem" }, platformTag(r.platform), document.createTextNode(problemLabel(r))), chip(label, tone)),
     el("p", {
       className: "detail muted",
       text: [r.langName, submissionLabel(r), relativeTime(r.updatedAt)].filter(Boolean).join(" · "),
@@ -191,7 +192,12 @@ function historyList(s: PublicState): HTMLElement | null {
       el(
         "li",
         {},
-        el("span", { className: "name", text: problemLabel(r), attrs: { title: r.error?.message ?? r.path ?? "" } }),
+        el(
+          "span",
+          { className: "name", attrs: { title: r.error?.message ?? r.path ?? "" } },
+          platformTag(r.platform),
+          document.createTextNode(problemLabel(r)),
+        ),
         el("span", { className: "meta", text: relativeTime(r.updatedAt) }),
         chip(label, tone),
       ),
