@@ -1,4 +1,4 @@
-import type { ConnectionState, PublicState, Settings, SubmissionDetails, SyncErrorInfo } from "../types";
+import type { ConnectionState, Platform, PublicState, Settings, SubmissionDetails, SyncErrorInfo } from "../types";
 import type { SettingsErrors } from "./validation";
 
 /** Messages a LeetCode content script may send to the service worker. */
@@ -14,7 +14,14 @@ export type ContentToWorker =
 /** Messages a codeforces.com content script may send to the service worker. */
 export type CodeforcesToWorker =
   | { type: "codeforces:hello" }
-  | { type: "codeforces:detected"; submissionId: string; titleSlug: string; title: string; frontendId: string }
+  | {
+      type: "codeforces:detected";
+      submissionId: string;
+      titleSlug: string;
+      title: string;
+      frontendId: string;
+      source?: "auto" | "manual";
+    }
   | {
       type: "codeforces:details";
       submissionId: string;
@@ -49,6 +56,10 @@ export type ToContent =
   | { type: "page:sync"; submissionId: string };
 
 export interface PageContext {
+  /** Missing on LeetCode tabs from older builds; treated as LeetCode. */
+  platform?: Platform;
+  /** Codeforces tabs only: whether Codeforces sync is turned on. */
+  codeforcesEnabled?: boolean;
   titleSlug?: string;
   /** Submission id in the URL (e.g. /problems/x/submissions/123/). */
   urlSubmissionId?: string;

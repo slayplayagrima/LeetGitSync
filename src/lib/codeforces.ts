@@ -124,6 +124,15 @@ export function hasPending(subs: CodeforcesSubmission[], sinceMs: number): boole
   return subs.some((s) => isSince(s, sinceMs) && !isFinalVerdict(s.verdict));
 }
 
+/** Submission shown by a Codeforces page URL, e.g. /contest/1850/submission/202 or /problemset/submission/1850/202. */
+export function submissionFromPath(pathname: string): { contestId: number; id: number } | undefined {
+  const m =
+    /^\/(?:contest|gym)\/(\d{1,7})\/submission\/(\d{1,20})\/?$/.exec(pathname) ??
+    /^\/problemset\/submission\/(\d{1,7})\/(\d{1,20})\/?$/.exec(pathname);
+  if (!m) return undefined;
+  return { contestId: Number(m[1]), id: Number(m[2]) };
+}
+
 /** Reads the signed-in handle from the Codeforces page header, if present. */
 export function detectHandle(doc: Pick<Document, "querySelector">): string | undefined {
   const link = doc.querySelector('.lang-chooser a[href^="/profile/"]');

@@ -3,6 +3,7 @@ import {
   CodeforcesWatcher,
   decodeHtmlEntities,
   extractSourceFromHtml,
+  submissionFromPath,
   submissionPagePath,
   toSubmissionDetails,
   MAX_POLLS,
@@ -343,5 +344,51 @@ describe("saving Codeforces solutions to GitHub", () => {
     await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" });
     await svc.reportDetails("cf-202", { ok: false, error: { code: "details_unavailable", message: "security check", retryable: false } });
     expect((await store.getRecords())["cf-202"]).toMatchObject({ status: "needs_review", error: { code: "details_unavailable" } });
+  });
+});
+
+describe("syncing a Codeforces submission from its page", () => {
+  it("reads the submission from page URLs", () => {
+    expect(submissionFromPath("/contest/1850/submission/202")).toEqual({ contestId: 1850, id: 202 });
+    expect(submissionFromPath("/gym/104000/submission/7/")).toEqual({ contestId: 104000, id: 7 });
+    expect(submissionFromPath("/problemset/submission/1850/202")).toEqual({ contestId: 1850, id: 202 });
+    expect(submissionFromPath("/contest/1850/my")).toBeUndefined();
+  });
+
+  const input = { submissionId: "cf-202", titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" };
+
+  it("creates an approved record for a manual request, even outside the automatic window", async () => {
+    const store = new StateStore(new MemoryStore());
+    const svc = new SyncService({ store, now: () => SINCE });
+    expect(await svc.reportCodeforcesDetected({ ...input, source: "manual" })).toEqual({ created: true, needDetails: true });
+    expect((await store.getRecords())["cf-202"]).toMatchObject({ source: "manual", userApproved: true, status: "waiting_details" });
+  });
+
+  it("retries a submission that needed review", async () => {
+    const store = new StateStore(new MemoryStore());
+    const svc = new SyncService({ store, now: () => SINCE });
+    await svc.reportCodeforcesDetected(input);
+    await svc.reportDetails("cf-202", { ok: false, error: { code: "details_unavailable", message: "x", retryable: false } });
+    expect(await svc.reportCodeforcesDetected({ ...input, source: "manual" })).toEqual({ created: false, needDetails: true });
+    const r = (await store.getRecords())["cf-202"]!;
+    expect(r.status).toBe("waiting_details");
+    expect(r.error).toBeUndefined();
+  });
+
+  it("reports an already synced submission without doing anything", async () => {
+    const gh = new FakeGitHub();
+    const store = new StateStore(new MemoryStore());
+    await store.saveSettings({ ...(await store.getSettings()), owner: gh.owner, repo: gh.repo, codeforcesEnabled: true });
+    await store.setToken(gh.token);
+    const svc = new SyncService({ store, fetch: gh.fetch, now: () => SINCE });
+    await svc.reportCodeforcesDetected(input);
+    const [s] = parseUserStatus(ok(sub(202, "OK")))!;
+    await svc.reportDetails("cf-202", { ok: true, details: toSubmissionDetails(s!, CODE, "cpp") });
+    expect(await svc.reportCodeforcesDetected({ ...input, source: "manual" })).toEqual({
+      created: false,
+      needDetails: false,
+      message: "Already synced.",
+    });
+    expect(gh.userCommits).toHaveLength(1);
   });
 });

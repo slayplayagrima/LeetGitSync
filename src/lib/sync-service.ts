@@ -113,13 +113,27 @@ export class SyncService {
     titleSlug: string;
     title: string;
     frontendId: string;
-  }): Promise<{ created: boolean; needDetails: boolean }> {
+    source?: "auto" | "manual";
+  }): Promise<{ created: boolean; needDetails: boolean; message?: string }> {
     if (!isCodeforcesRecordId(input.submissionId) || !isValidSlug(input.titleSlug)) {
       return { created: false, needDetails: false };
     }
     const now = this.#now();
-    return this.#store.updateRecords((records) => {
+    const manual = input.source === "manual";
+    const result = await this.#store.updateRecords((records) => {
       const existing = records[input.submissionId];
+      if (existing && manual) {
+        if (existing.status === "synced") return { created: false, needDetails: false, message: "Already synced." };
+        if (existing.status === "syncing") return { created: false, needDetails: false, message: "Already syncing." };
+        existing.userApproved = true;
+        existing.attempts = 0;
+        existing.updatedAt = now;
+        delete existing.error;
+        delete existing.nextAttemptAt;
+        if (existing.status === "ready" && existing.details) return { created: false, needDetails: false, message: "Queued for sync." };
+        existing.status = "waiting_details";
+        return { created: false, needDetails: true };
+      }
       if (existing) {
         // Still missing its code (e.g. the tab closed before it was read): read it again.
         const needDetails = existing.status === "detected" || existing.status === "waiting_details";
@@ -136,13 +150,16 @@ export class SyncService {
         title: input.title.slice(0, 200),
         frontendId: input.frontendId.slice(0, 20),
         status: "waiting_details",
-        source: "auto",
+        source: manual ? "manual" : "auto",
+        ...(manual ? { userApproved: true } : {}),
         detectedAt: now,
         updatedAt: now,
         attempts: 0,
       };
       return { created: true, needDetails: true };
     });
+    if (manual && result.message === "Queued for sync.") await this.processQueue();
+    return result;
   }
 
   /** The content script fetched (or failed to fetch) details for a waiting submission. */

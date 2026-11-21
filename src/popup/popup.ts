@@ -130,9 +130,19 @@ function latestCard(s: PublicState): HTMLElement {
 function pageCard(s: PublicState): HTMLElement | null {
   if (!page) return null;
   const { context, tabId } = page;
+  const site = context.platform === "codeforces" ? "Codeforces" : "LeetCode";
   const candidate = context.urlSubmissionId ?? context.lastAcceptedId;
-  const card = el("section", { className: "card", attrs: { "aria-label": "This LeetCode page" } });
-  card.append(el("h2", { text: "This page" }));
+  const card = el("section", { className: "card", attrs: { "aria-label": `This ${site} page` } });
+  card.append(el("h2", {}, platformTag(context.platform), document.createTextNode("This page")));
+  if (context.platform === "codeforces" && !context.codeforcesEnabled) {
+    const btn = el("button", { className: "btn btn-small", text: "Open settings", attrs: { type: "button" } });
+    btn.addEventListener("click", () => void chrome.runtime.openOptionsPage());
+    card.append(
+      el("p", { className: "detail muted", text: "Codeforces sync is off. Turn it on in Settings to save your accepted Codeforces solutions." }),
+      el("div", { className: "actions" }, btn),
+    );
+    return card;
+  }
   if (!context.hookActive) {
     card.append(
       el("p", {
@@ -142,34 +152,34 @@ function pageCard(s: PublicState): HTMLElement | null {
     );
   }
   if (!candidate) {
-    card.append(
-      el("p", {
-        className: "detail muted",
-        text: context.titleSlug
+    const hint =
+      context.platform === "codeforces"
+        ? "Accepted submissions sync on their own. To sync one by hand, open its page (click its number under My submissions)."
+        : context.titleSlug
           ? "Submit a solution to sync it. To sync an earlier accepted submission, open it from the Submissions tab."
-          : "Open a LeetCode problem to sync your accepted submissions.",
-      }),
-    );
+          : "Open a LeetCode problem to sync your accepted submissions.";
+    card.append(el("p", { className: "detail muted", text: hint }));
   } else {
     const known = s.records.find((r) => r.submissionId === candidate);
     const already = known?.status === "synced";
+    const shown = submissionLabel({ platform: context.platform, submissionId: candidate });
     card.append(
       el("p", {
         className: "detail",
-        text: already ? `Submission #${candidate} is already synced.` : `Submission #${candidate} is open on this page.`,
+        text: already ? `Submission ${shown} is already synced.` : `Submission ${shown} is open on this page.`,
       }),
     );
     if (!already) {
       const btn = el("button", { className: "btn btn-primary btn-small", text: "Sync this accepted submission", attrs: { type: "button" } });
       btn.addEventListener("click", async () => {
         btn.disabled = true;
-        btn.textContent = "Reading from LeetCode…";
+        btn.textContent = `Reading from ${site}…`;
         try {
           const message: ToContent = { type: "page:sync", submissionId: candidate };
           const res = (await chrome.tabs.sendMessage(tabId, message)) as { ok: boolean; message: string } | undefined;
           pageMessage = res ? { text: res.message, tone: res.ok ? "ok" : "error" } : { text: "No response from the page. Reload it and try again.", tone: "error" };
         } catch {
-          pageMessage = { text: "Could not reach the LeetCode page. Reload it and try again.", tone: "error" };
+          pageMessage = { text: `Could not reach the ${site} page. Reload it and try again.`, tone: "error" };
         }
         await refresh();
       });

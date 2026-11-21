@@ -146,6 +146,7 @@ async function handleCodeforces(msg: CodeforcesToWorker): Promise<unknown> {
         titleSlug: String(msg.titleSlug),
         title: String(msg.title),
         frontendId: String(msg.frontendId),
+        source: msg.source === "manual" ? "manual" : "auto",
       });
       await updateBadge();
       return { ok: true, data: res };
