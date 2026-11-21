@@ -62,27 +62,42 @@ export interface SolutionPaths {
   folderKey: string;
 }
 
+/** Codeforces base name, e.g. "1850A-to-my-critics"; the problem number is always kept to avoid clashes. */
+export function buildCodeforcesBaseName(style: FilenameStyle, frontendId: string | undefined, title: string | undefined): string {
+  const number = (frontendId ?? "").replace(/[^A-Za-z0-9]/g, "");
+  if (!number) throw new Error("Codeforces problem number is missing.");
+  const slug = normalizeTitle(title ?? "");
+  if (!slug) return number;
+  return style === "number-dot-slug" ? `${number}.${slug}` : `${number}-${slug}`;
+}
+
 export function buildPaths(
-  settings: Pick<Settings, "rootFolder" | "filenameStyle" | "languageFolders" | "historyPolicy">,
-  details: Pick<SubmissionDetails, "titleSlug" | "frontendId" | "langSlug" | "submissionId">,
+  settings: Pick<Settings, "rootFolder" | "filenameStyle" | "languageFolders" | "historyPolicy"> &
+    Partial<Pick<Settings, "codeforcesFolder">>,
+  details: Pick<SubmissionDetails, "titleSlug" | "frontendId" | "langSlug" | "submissionId"> &
+    Partial<Pick<SubmissionDetails, "platform" | "title">>,
 ): SolutionPaths {
   const lang = getLanguage(details.langSlug);
+  const isCodeforces = details.platform === "codeforces";
   const root = cleanFolder(settings.rootFolder);
+  const site = isCodeforces ? cleanFolder(settings.codeforcesFolder ?? "codeforces") : "";
   const folder = cleanFolder(settings.languageFolders[lang.key] ?? lang.key);
-  if (!isSafeFolder(root) || !isSafeFolder(folder) || folder === "") {
-    throw new Error(`Folder name "${join(root, folder)}" contains characters that are not allowed.`);
+  if (!isSafeFolder(root) || !isSafeFolder(site) || !isSafeFolder(folder) || folder === "" || (isCodeforces && site === "")) {
+    throw new Error(`Folder name "${join(root, site, folder)}" contains characters that are not allowed.`);
   }
-  const base = buildBaseName(settings.filenameStyle, details.titleSlug, details.frontendId);
-  const id = details.submissionId;
+  const base = isCodeforces
+    ? buildCodeforcesBaseName(settings.filenameStyle, details.frontendId, details.title)
+    : buildBaseName(settings.filenameStyle, details.titleSlug, details.frontendId);
+  const id = isCodeforces ? details.submissionId.replace(/^cf-/, "") : details.submissionId;
   if (!/^\d+$/.test(id)) throw new Error("Submission id must be numeric.");
 
   const path =
     settings.historyPolicy === "separate"
-      ? join(root, folder, base, `${id}.${lang.extension}`)
-      : join(root, folder, `${base}.${lang.extension}`);
+      ? join(root, site, folder, base, `${id}.${lang.extension}`)
+      : join(root, site, folder, `${base}.${lang.extension}`);
   const metadataPath =
     settings.historyPolicy === "separate"
-      ? join(root, "metadata", folder, base, `${id}.json`)
-      : join(root, "metadata", folder, `${base}.json`);
+      ? join(root, "metadata", site, folder, base, `${id}.json`)
+      : join(root, "metadata", site, folder, `${base}.json`);
   return { path, metadataPath, folderKey: lang.key };
 }

@@ -263,8 +263,6 @@ export class SyncService {
 
   #isDue(r: SyncRecord, settings: Settings, now: number): boolean {
     if (!r.details) return false;
-    // Codeforces solutions are held locally until their GitHub file layout is in place.
-    if (r.platform === "codeforces") return false;
     const approved = settings.syncMode === "auto" || r.userApproved === true;
     if (r.status === "ready") return approved;
     if (r.status === "failed") return approved && r.error?.retryable === true && r.nextAttemptAt !== undefined && r.nextAttemptAt <= now;
@@ -421,7 +419,8 @@ export class SyncService {
         files.push({ path: paths.metadataPath, content: buildMetadataJson(details, paths.path) });
       }
       const verb = existing ? "Update" : "Add";
-      const message = `${verb} ${describe(details)} (${details.langName})`;
+      const site = details.platform === "codeforces" ? "Codeforces " : "";
+      const message = `${verb} ${site}${describe(details)} (${details.langName})`;
 
       try {
         const commit = await client.commitFiles(settings.branch, files, message);

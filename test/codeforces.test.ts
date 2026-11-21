@@ -265,25 +265,76 @@ describe("reading Codeforces source code", () => {
   });
 });
 
-describe("Codeforces code is kept locally until GitHub saving is added", () => {
-  it("stores the code but makes no GitHub requests", async () => {
+describe("saving Codeforces solutions to GitHub", () => {
+  async function setup(over: Record<string, unknown> = {}) {
     const gh = new FakeGitHub();
     const store = new StateStore(new MemoryStore());
-    await store.saveSettings({ ...(await store.getSettings()), owner: gh.owner, repo: gh.repo, codeforcesEnabled: true });
+    await store.saveSettings({ ...(await store.getSettings()), owner: gh.owner, repo: gh.repo, codeforcesEnabled: true, ...over });
     await store.setToken(gh.token);
     const svc = new SyncService({ store, fetch: gh.fetch, now: () => SINCE });
-    await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" });
-    const [s] = parseUserStatus(ok(sub(202, "OK")))!;
-    await svc.reportDetails("cf-202", { ok: true, details: toSubmissionDetails(s!, CODE, "cpp") });
+    return { gh, store, svc };
+  }
+  async function deliver(svc: SyncService, id: number, code = CODE, verdict = "OK") {
+    const rid = `cf-${id}`;
+    await svc.reportCodeforcesDetected({ submissionId: rid, titleSlug: "1850-d", title: "Balanced Round", frontendId: "1850D" });
+    const [s] = parseUserStatus(ok(sub(id, verdict)))!;
+    await svc.reportDetails(rid, { ok: true, details: toSubmissionDetails(s!, code, "cpp") });
+  }
+
+  it("commits the exact code under codeforces/<language>/ with a Codeforces header", async () => {
+    const { gh, store, svc } = await setup();
+    await deliver(svc, 202);
     const record = (await store.getRecords())["cf-202"]!;
-    expect(record.status).toBe("ready");
-    expect(record.details?.code).toBe(CODE);
-    expect(gh.requests).toHaveLength(0);
-    // Detected again later: nothing new is needed.
-    expect(await svc.reportCodeforcesDetected({ submissionId: "cf-202", titleSlug: "1850-d", title: "x", frontendId: "1850D" })).toEqual({
-      created: false,
-      needDetails: false,
-    });
+    expect(record).toMatchObject({ status: "synced", outcome: "created", path: "codeforces/cpp/1850D-balanced-round.cpp" });
+    expect(record.details).toBeUndefined();
+    expect(gh.userCommits.map((c) => c.message)).toEqual(["Add Codeforces 1850D. Balanced Round (C++17 (GCC 7-32))"]);
+    const file = gh.fileAt("codeforces/cpp/1850D-balanced-round.cpp")!;
+    expect(file.split("\n").slice(0, 8)).toEqual([
+      "// Codeforces 1850D. Balanced Round",
+      "// https://codeforces.com/contest/1850/problem/D",
+      "// Rating: 900",
+      "// Language: C++17 (GCC 7-32)",
+      "// Submission: 202",
+      `// Submitted: ${new Date(AFTER * 1000).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC")}`,
+      "// Runtime: 93 ms, Memory: 1.6 MB",
+      "",
+    ]);
+    expect(file.endsWith(`\n\n${CODE}`)).toBe(true);
+  });
+
+  it("does not commit again for the same code, and updates for new code", async () => {
+    const { gh, store, svc } = await setup();
+    await deliver(svc, 202);
+    await deliver(svc, 203);
+    expect((await store.getRecords())["cf-203"]).toMatchObject({ status: "synced", outcome: "unchanged" });
+    expect(gh.userCommits).toHaveLength(1);
+    await deliver(svc, 204, CODE.replace("a&b", "faster"));
+    expect((await store.getRecords())["cf-204"]).toMatchObject({ outcome: "updated" });
+    expect(gh.userCommits.map((c) => c.message)[1]).toBe("Update Codeforces 1850D. Balanced Round (C++17 (GCC 7-32))");
+  });
+
+  it("keeps LeetCode files where they were", async () => {
+    const { gh, svc } = await setup();
+    await deliver(svc, 202);
+    expect([...gh.head().tree.keys()].sort()).toEqual(["README.md", "codeforces/cpp/1850D-balanced-round.cpp"]);
+  });
+
+  it("uses the configured folder, metadata sidecar and separate-file policy", async () => {
+    const { gh, svc } = await setup({ codeforcesFolder: "cf", metadataSidecar: true, historyPolicy: "separate" });
+    await deliver(svc, 202);
+    expect(gh.fileAt("cf/cpp/1850D-balanced-round/202.cpp")).toBeDefined();
+    const meta = JSON.parse(gh.fileAt("metadata/cf/cpp/1850D-balanced-round/202.json")!);
+    expect(meta).toMatchObject({ site: "codeforces", problem: { rating: 900 }, submission: { id: "202", url: "https://codeforces.com/contest/1850/submission/202" } });
+    expect(gh.userCommits).toHaveLength(1);
+  });
+
+  it("waits for confirmation in manual mode", async () => {
+    const { gh, store, svc } = await setup({ syncMode: "manual" });
+    await deliver(svc, 202);
+    expect((await store.getRecords())["cf-202"]!.status).toBe("ready");
+    expect(gh.userCommits).toHaveLength(0);
+    await svc.retry("cf-202");
+    expect((await store.getRecords())["cf-202"]!.status).toBe("synced");
   });
 
   it("marks unreadable code for review instead of guessing", async () => {

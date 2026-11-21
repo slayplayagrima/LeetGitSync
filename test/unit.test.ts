@@ -76,6 +76,16 @@ describe("filename generation", () => {
     expect(buildPaths(s, details).path).toBe("leetcode/py3/0001-two-sum/1234567890.py");
     expect(buildPaths(s, details).metadataPath).toBe("leetcode/metadata/py3/0001-two-sum/1234567890.json");
   });
+  it("builds Codeforces paths under their own folder", () => {
+    const cf = { titleSlug: "1850-a", frontendId: "1850A", title: "To My Critics", langSlug: "cpp", submissionId: "cf-202", platform: "codeforces" as const };
+    expect(buildPaths(DEFAULT_SETTINGS, cf).path).toBe("codeforces/cpp/1850A-to-my-critics.cpp");
+    expect(buildPaths({ ...DEFAULT_SETTINGS, filenameStyle: "number-dot-slug", rootFolder: "solutions" }, cf).path).toBe(
+      "solutions/codeforces/cpp/1850A.to-my-critics.cpp",
+    );
+    // The problem number is kept even with the slug-only style, so problems never overwrite each other.
+    expect(buildPaths({ ...DEFAULT_SETTINGS, filenameStyle: "slug" }, cf).path).toBe("codeforces/cpp/1850A-to-my-critics.cpp");
+    expect(() => buildPaths({ ...DEFAULT_SETTINGS, codeforcesFolder: "../x" }, cf)).toThrow();
+  });
   it("rejects unsafe folders", () => {
     expect(isSafeFolder("a/b")).toBe(true);
     expect(isSafeFolder("../x")).toBe(false);
@@ -185,6 +195,12 @@ describe("file content", () => {
   });
   it("adds a trailing newline only when missing", () => {
     expect(buildSolutionFile({ ...details, code: "x = 1" }, py, false)).toBe("x = 1\n");
+  });
+  it("closes block comments for languages without line comments", () => {
+    const ml = getLanguage("ocaml");
+    const file = buildSolutionFile({ ...details, langSlug: "ocaml" }, ml, true);
+    expect(file.startsWith("(* LeetCode 1. Two Sum *)\n")).toBe(true);
+    expect(extractCode(file, ml)).toBe(details.code);
   });
   it("keeps header values on one line", () => {
     const header = buildHeader({ ...details, title: "Evil\nimport os" }, py);
