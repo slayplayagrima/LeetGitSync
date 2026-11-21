@@ -143,3 +143,10 @@ export function filterRecords(records: PublicRecord[], platform: PlatformFilter,
     return q.split(/\s+/).every((word) => haystack.includes(word));
   });
 }
+
+/** Synced submissions per site, for the popup's breakdown. */
+export function syncedBySite(records: PublicRecord[]): Record<Platform, number> {
+  const counts: Record<Platform, number> = { leetcode: 0, codeforces: 0 };
+  for (const r of records) if (r.status === "synced") counts[r.platform ?? "leetcode"]++;
+  return counts;
+}

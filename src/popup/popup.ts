@@ -7,6 +7,7 @@ import {
   fileUrl,
   loadState,
   platformTag,
+  syncedBySite,
   problemLabel,
   relativeTime,
   submissionLabel,
@@ -234,6 +235,25 @@ function setupView(): HTMLElement {
   );
 }
 
+function syncedStat(s: PublicState): HTMLElement {
+  const bySite = syncedBySite(s.records);
+  const breakdown = el(
+    "span",
+    { className: "by-site", attrs: { "aria-label": `LeetCode ${bySite.leetcode}, Codeforces ${bySite.codeforces}` } },
+    platformTag("leetcode"),
+    el("span", { className: "n", text: String(bySite.leetcode) }),
+    platformTag("codeforces"),
+    el("span", { className: "n", text: String(bySite.codeforces) }),
+  );
+  return el(
+    "div",
+    { className: "stat" },
+    el("span", { className: "value", text: String(s.counts.synced) }),
+    el("span", { className: "label", text: "Submissions synced" }),
+    breakdown,
+  );
+}
+
 function render(s: PublicState): void {
   renderConnection(s);
   retryFailedBtn.disabled = !s.records.some((r) => r.status === "failed");
@@ -285,7 +305,7 @@ function render(s: PublicState): void {
     el(
       "div",
       { className: "stats" },
-      el("div", { className: "stat" }, el("span", { className: "value", text: String(s.counts.synced) }), el("span", { className: "label", text: "Submissions synced" })),
+      syncedStat(s),
       el(
         "div",
         { className: `stat${s.counts.attention ? " attention" : ""}` },

@@ -203,6 +203,21 @@ describe("history filters", () => {
   });
 });
 
+describe("synced counts per site", () => {
+  it("counts only synced submissions, with older records as LeetCode", async () => {
+    const { syncedBySite } = await import("../src/ui/shared");
+    const base = { titleSlug: "x", source: "auto" as const, detectedAt: 0, updatedAt: 0, attempts: 1 };
+    expect(
+      syncedBySite([
+        { ...base, submissionId: "1", status: "synced" },
+        { ...base, submissionId: "2", status: "synced", platform: "leetcode" },
+        { ...base, submissionId: "cf-3", status: "synced", platform: "codeforces" },
+        { ...base, submissionId: "cf-4", status: "failed", platform: "codeforces" },
+      ]),
+    ).toEqual({ leetcode: 2, codeforces: 1 });
+  });
+});
+
 describe("file content", () => {
   const py = getLanguage("python3");
   it("adds a header and preserves code exactly", () => {

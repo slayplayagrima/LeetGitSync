@@ -137,6 +137,16 @@ main {
   font-size: 11.5px;
   color: var(--text-muted);
 }
+.stat .by-site {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.stat .by-site .n {
+  margin-right: 10px;
+}
 .stat.attention .value {
   color: var(--danger);
 }
