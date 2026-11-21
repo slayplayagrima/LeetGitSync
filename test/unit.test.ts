@@ -172,6 +172,37 @@ describe("platform labels", () => {
   });
 });
 
+describe("history filters", () => {
+  const rec = (o: Partial<SyncRecord>): SyncRecord => ({
+    submissionId: "1",
+    titleSlug: "two-sum",
+    status: "synced",
+    source: "auto",
+    detectedAt: 0,
+    updatedAt: 0,
+    attempts: 1,
+    ...o,
+  });
+  const records = [
+    rec({ submissionId: "1", title: "Two Sum", frontendId: "1", langName: "Python3", path: "python/0001-two-sum.py" }),
+    rec({ platform: "codeforces", submissionId: "cf-202", titleSlug: "1850-a", title: "To My Critics", frontendId: "1850A", langName: "C++17 (GCC 7-32)" }),
+    rec({ submissionId: "2", title: "Valid Parentheses", frontendId: "20", langName: "Java", status: "needs_review" }),
+  ];
+  it("filters by site and by search words", async () => {
+    const { filterRecords } = await import("../src/ui/shared");
+    const ids = (list: SyncRecord[]) => list.map((r) => r.submissionId);
+    expect(ids(filterRecords(records, "all", ""))).toEqual(["1", "cf-202", "2"]);
+    expect(ids(filterRecords(records, "leetcode", ""))).toEqual(["1", "2"]);
+    expect(ids(filterRecords(records, "codeforces", ""))).toEqual(["cf-202"]);
+    expect(ids(filterRecords(records, "all", "critics"))).toEqual(["cf-202"]);
+    expect(ids(filterRecords(records, "all", "1850a"))).toEqual(["cf-202"]);
+    expect(ids(filterRecords(records, "all", "202"))).toEqual(["cf-202"]);
+    expect(ids(filterRecords(records, "all", "python two"))).toEqual(["1"]);
+    expect(ids(filterRecords(records, "all", "review"))).toEqual(["2"]);
+    expect(ids(filterRecords(records, "codeforces", "two"))).toEqual([]);
+  });
+});
+
 describe("file content", () => {
   const py = getLanguage("python3");
   it("adds a header and preserves code exactly", () => {

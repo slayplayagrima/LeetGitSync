@@ -270,3 +270,45 @@ td.actions-cell {
 .perm-list li {
   margin: 6px 0;
 }
+
+.history-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.seg {
+  border: none;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font: 500 12.5px var(--font);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.seg:last-child {
+  border-right: none;
+}
+.seg[aria-pressed="true"] {
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-weight: 600;
+}
+.seg .count {
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 2px;
+}
+.search {
+  flex: 1;
+  max-width: 300px;
+  min-width: 180px;
+}

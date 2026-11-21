@@ -120,3 +120,26 @@ export function fileUrl(owner: string, repo: string, branch: string, path: strin
   const enc = (s: string) => s.split("/").map(encodeURIComponent).join("/");
   return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/blob/${enc(branch)}/${enc(path)}`;
 }
+
+export type PlatformFilter = "all" | Platform;
+
+/** Filters history by site and by a free-text query over problem, number, language, path and status. */
+export function filterRecords(records: PublicRecord[], platform: PlatformFilter, query: string): PublicRecord[] {
+  const q = query.trim().toLowerCase();
+  return records.filter((r) => {
+    if (platform !== "all" && (r.platform ?? "leetcode") !== platform) return false;
+    if (!q) return true;
+    const haystack = [
+      problemLabel(r),
+      r.titleSlug,
+      r.submissionId.replace(/^cf-/, ""),
+      r.langName ?? "",
+      r.path ?? "",
+      statusLabel(r, false).label,
+      r.error?.message ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+    return q.split(/\s+/).every((word) => haystack.includes(word));
+  });
+}

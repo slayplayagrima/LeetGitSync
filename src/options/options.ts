@@ -2,7 +2,20 @@ import { buildPaths } from "../lib/filename";
 import { DEFAULT_FOLDER_KEYS, folderKeyLabel } from "../lib/languages";
 import type { SettingsErrors } from "../lib/validation";
 import type { ConnectionState, FilenameStyle, HistoryPolicy, PublicState, Settings, SyncMode } from "../types";
-import { callWorker, chip, el, fileUrl, loadState, platformTag, problemLabel, relativeTime, statusLabel, submissionLabel } from "../ui/shared";
+import {
+  callWorker,
+  chip,
+  el,
+  fileUrl,
+  filterRecords,
+  loadState,
+  platformTag,
+  problemLabel,
+  relativeTime,
+  statusLabel,
+  submissionLabel,
+  type PlatformFilter,
+} from "../ui/shared";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -28,6 +41,8 @@ const connectionBox = $<HTMLDivElement>("connection-status");
 const historyBody = $<HTMLTableSectionElement>("history-body");
 
 let state: PublicState | null = null;
+let historyPlatform: PlatformFilter = "all";
+const historySearch = $<HTMLInputElement>("history-search");
 let dirty = false;
 
 function radioValue<T extends string>(name: string): T {
@@ -199,11 +214,27 @@ function renderHistory(s: PublicState): void {
   historyBody.replaceChildren();
   $<HTMLButtonElement>("retry-all").disabled = !s.records.some((r) => r.status === "failed");
   $<HTMLButtonElement>("clear-history").disabled = s.records.length === 0;
+  for (const [key, n] of [
+    ["all", s.records.length],
+    ["leetcode", s.records.filter((r) => (r.platform ?? "leetcode") === "leetcode").length],
+    ["codeforces", s.records.filter((r) => r.platform === "codeforces").length],
+  ] as const) {
+    const span = document.querySelector<HTMLElement>(`[data-count="${key}"]`);
+    if (span) span.textContent = String(n);
+  }
+  for (const btn of document.querySelectorAll<HTMLButtonElement>(".seg")) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.platform === historyPlatform));
+  }
   if (!s.records.length) {
     historyBody.append(el("tr", { className: "empty-row" }, el("td", { text: "No submissions yet.", attrs: { colspan: "5" } })));
     return;
   }
-  for (const r of s.records) {
+  const shown = filterRecords(s.records, historyPlatform, historySearch.value);
+  if (!shown.length) {
+    historyBody.append(el("tr", { className: "empty-row" }, el("td", { text: "No submissions match these filters.", attrs: { colspan: "5" } })));
+    return;
+  }
+  for (const r of shown) {
     const { label, tone } = statusLabel(r, s.settings.syncMode === "manual");
     const problem = el("td", {}, el("span", {}, platformTag(r.platform), document.createTextNode(problemLabel(r))), el("span", { className: "sub", text: submissionLabel(r) }));
     if (r.path) problem.append(el("span", { className: "sub mono", text: r.path }));
@@ -268,18 +299,28 @@ async function refresh(refillForm: boolean): Promise<void> {
 // ------------------------------------------------------------------ events
 
 document.addEventListener("input", (e) => {
-  if (e.target === tokenInput) return;
+  if (e.target === tokenInput || e.target === historySearch) return;
   dirty = true;
   setMessage(saveMsg, "Unsaved changes");
   updatePreview();
   updateCodeforcesPreview();
 });
 document.addEventListener("change", (e) => {
-  if (e.target === tokenInput) return;
+  if (e.target === tokenInput || e.target === historySearch) return;
   dirty = true;
   setMessage(saveMsg, "Unsaved changes");
   updatePreview();
   updateCodeforcesPreview();
+});
+
+for (const btn of document.querySelectorAll<HTMLButtonElement>(".seg")) {
+  btn.addEventListener("click", () => {
+    historyPlatform = (btn.dataset.platform as PlatformFilter) ?? "all";
+    if (state) renderHistory(state);
+  });
+}
+historySearch.addEventListener("input", () => {
+  if (state) renderHistory(state);
 });
 
 $("save-settings").addEventListener("click", async () => {

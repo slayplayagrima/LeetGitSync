@@ -162,6 +162,17 @@
           <button id="clear-history" class="btn btn-danger" type="button">Clear local history…</button>
         </div>
         <p class="hint">Clearing history only forgets local records. It never deletes anything on GitHub.</p>
+        <div class="history-tools">
+          <div class="segmented" role="group" aria-label="Show submissions from">
+            <button type="button" class="seg" data-platform="all" aria-pressed="true">All <span class="count" data-count="all"></span></button>
+            <button type="button" class="seg" data-platform="leetcode" aria-pressed="false">LeetCode <span class="count" data-count="leetcode"></span></button>
+            <button type="button" class="seg" data-platform="codeforces" aria-pressed="false">Codeforces <span class="count" data-count="codeforces"></span></button>
+          </div>
+          <label class="search">
+            <span class="visually-hidden">Search history</span>
+            <input id="history-search" type="search" placeholder="Search problem, number, language…" autocomplete="off" spellcheck="false" />
+          </label>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
