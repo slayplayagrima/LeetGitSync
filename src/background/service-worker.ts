@@ -4,7 +4,7 @@ import { log } from "../lib/log";
 import type { CodeforcesConfig, CodeforcesToWorker, ContentToWorker, PageToWorker, ToContent, WorkerMessage } from "../lib/messages";
 import { applyCodeforcesToggle, chromeLocalStore, StateStore } from "../lib/storage";
 import { SyncService, type SyncEvent } from "../lib/sync-service";
-import { isValidSubmissionId, validateSettings } from "../lib/validation";
+import { isValidCodeforcesHandle, isValidSubmissionId, validateSettings } from "../lib/validation";
 import type { Settings } from "../types";
 
 const LEETCODE_ORIGIN = "https://leetcode.com";
@@ -151,6 +151,17 @@ async function handleCodeforces(msg: CodeforcesToWorker): Promise<unknown> {
       await updateBadge();
       return { ok: true, data: res };
     }
+    case "codeforces:status": {
+      const handle = typeof msg.handle === "string" && isValidCodeforcesHandle(msg.handle) ? msg.handle : undefined;
+      const message = typeof msg.message === "string" ? msg.message.slice(0, 300) : undefined;
+      await store.setCodeforcesStatus({
+        checkedAt: Date.now(),
+        ok: msg.ok === true,
+        ...(handle ? { handle } : {}),
+        ...(message ? { message } : {}),
+      });
+      return { ok: true, data: undefined };
+    }
     case "codeforces:details": {
       if (!isCodeforcesRecordId(msg.submissionId)) return { ok: false, error: "Invalid submission id." };
       if (msg.result.ok && msg.result.details.platform !== "codeforces") {
@@ -247,7 +258,7 @@ async function handlePage(msg: PageToWorker): Promise<unknown> {
 }
 
 const CONTENT_TYPES = new Set(["content:hello", "submission:accepted", "submission:details"]);
-const CODEFORCES_TYPES = new Set(["codeforces:hello", "codeforces:detected", "codeforces:details"]);
+const CODEFORCES_TYPES = new Set(["codeforces:hello", "codeforces:detected", "codeforces:details", "codeforces:status"]);
 
 chrome.runtime.onMessage.addListener((raw: unknown, sender, sendResponse) => {
   const msg = raw as WorkerMessage;

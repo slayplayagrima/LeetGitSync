@@ -151,7 +151,11 @@ void (async () => {
   if (!config?.enabled || config.sinceMs === undefined) return;
 
   const handle = config.handle || detectHandle(document);
-  if (!handle) return; // Not signed in and no handle configured: nothing to watch.
+  if (!handle) {
+    // Not signed in and no handle configured: nothing to watch.
+    await send({ type: "codeforces:status", ok: false, message: "Not signed in on codeforces.com, and no handle is set." });
+    return;
+  }
 
   const watcher = new CodeforcesWatcher({
     handle,
@@ -159,6 +163,7 @@ void (async () => {
     fetchJson,
     schedule: (fn, ms) => setTimeout(fn, ms),
     onError: (message) => log.warn(message),
+    onChecked: (ok, message) => void send({ type: "codeforces:status", handle, ok, ...(message ? { message } : {}) }),
     onAccepted: async (sub) => {
       const number = codeforcesProblemNumber(sub.contestId as number, sub.problem.index);
       const reply = await send<{ ok: boolean; data?: { created: boolean; needDetails: boolean } }>(detectedMessage(sub, "auto"));

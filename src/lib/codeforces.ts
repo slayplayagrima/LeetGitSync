@@ -148,6 +148,8 @@ export interface WatcherDeps {
   schedule: (fn: () => void, ms: number) => void;
   onAccepted: (sub: CodeforcesSubmission) => void | Promise<void>;
   onError?: (message: string) => void;
+  /** Called after every API check with whether it worked. */
+  onChecked?: (ok: boolean, message?: string) => void;
 }
 
 export const POLL_INTERVAL_MS = 5_000;
@@ -168,6 +170,11 @@ export class CodeforcesWatcher {
     this.#deps = deps;
   }
 
+  #fail(message: string): void {
+    this.#deps.onError?.(message);
+    this.#deps.onChecked?.(false, message);
+  }
+
   get polls(): number {
     return this.#polls;
   }
@@ -179,9 +186,10 @@ export class CodeforcesWatcher {
     try {
       const path = `/api/user.status?handle=${encodeURIComponent(this.#deps.handle)}&from=1&count=10`;
       subs = parseUserStatus(await this.#deps.fetchJson(path));
-      if (!subs) this.#deps.onError?.("Codeforces returned an unexpected response for your recent submissions.");
+      if (!subs) this.#fail("Codeforces returned an unexpected response for your recent submissions.");
+      else this.#deps.onChecked?.(true);
     } catch {
-      this.#deps.onError?.("Could not reach the Codeforces API to check your submissions.");
+      this.#fail("Could not reach the Codeforces API to check your submissions.");
     } finally {
       this.#running = false;
     }

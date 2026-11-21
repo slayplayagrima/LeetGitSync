@@ -137,11 +137,20 @@ export interface ConnectionState {
   errorCode?: ErrorCode;
 }
 
+/** Result of the latest check of the user's Codeforces submissions. */
+export interface CodeforcesStatus {
+  handle?: string;
+  checkedAt: number;
+  ok: boolean;
+  message?: string;
+}
+
 /** Summary sent to the popup and options page. Never contains the token or source code. */
 export interface PublicState {
   settings: Settings;
   hasToken: boolean;
   connection: ConnectionState;
+  codeforces?: CodeforcesStatus;
   records: PublicRecord[];
   counts: { synced: number; attention: number; pending: number };
 }

@@ -1,4 +1,4 @@
-import type { ConnectionState, Settings, SyncRecord } from "../types";
+import type { CodeforcesStatus, ConnectionState, Settings, SyncRecord } from "../types";
 
 /** The subset of chrome.storage.local used here, so tests can supply an in-memory version. */
 export interface KeyValueStore {
@@ -28,6 +28,7 @@ const KEYS = {
   token: "githubToken",
   records: "syncRecords",
   connection: "connection",
+  codeforcesStatus: "codeforcesStatus",
 } as const;
 
 /** Synced records beyond this count are pruned, oldest first. Pending and failed ones are always kept. */
@@ -131,6 +132,16 @@ export class StateStore {
 
   async setConnection(connection: ConnectionState): Promise<void> {
     await this.#kv.set({ [KEYS.connection]: connection });
+  }
+
+  async getCodeforcesStatus(): Promise<CodeforcesStatus | undefined> {
+    const got = await this.#kv.get([KEYS.codeforcesStatus]);
+    const c = got[KEYS.codeforcesStatus];
+    return c && typeof c === "object" ? (c as CodeforcesStatus) : undefined;
+  }
+
+  async setCodeforcesStatus(status: CodeforcesStatus): Promise<void> {
+    await this.#kv.set({ [KEYS.codeforcesStatus]: status });
   }
 
   async getRecords(): Promise<Record<string, SyncRecord>> {

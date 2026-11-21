@@ -392,3 +392,33 @@ describe("syncing a Codeforces submission from its page", () => {
     expect(gh.userCommits).toHaveLength(1);
   });
 });
+
+describe("Codeforces check status", () => {
+  it("reports each check's outcome", async () => {
+    const seen: Array<[boolean, string | undefined]> = [];
+    const make = (fetchJson: () => Promise<unknown>) =>
+      new CodeforcesWatcher({
+        handle: "me",
+        sinceMs: SINCE,
+        fetchJson,
+        schedule: () => {},
+        onAccepted: () => {},
+        onChecked: (okay, message) => void seen.push([okay, message]),
+      });
+    await make(async () => ok()).check();
+    await make(async () => ({ status: "FAILED" })).check();
+    await make(async () => {
+      throw new TypeError("offline");
+    }).check();
+    expect(seen.map(([okay]) => okay)).toEqual([true, false, false]);
+    expect(seen[2]![1]).toMatch(/Could not reach/);
+  });
+
+  it("is stored and included in the state shown to the settings page", async () => {
+    const store = new StateStore(new MemoryStore());
+    const svc = new SyncService({ store, now: () => SINCE });
+    expect((await svc.getPublicState()).codeforces).toBeUndefined();
+    await store.setCodeforcesStatus({ handle: "me", checkedAt: SINCE, ok: true });
+    expect((await svc.getPublicState()).codeforces).toEqual({ handle: "me", checkedAt: SINCE, ok: true });
+  });
+});

@@ -81,10 +81,7 @@ function fillForm(s: Settings): void {
   inputs.codeforcesEnabled.checked = s.codeforcesEnabled;
   inputs.codeforcesHandle.value = s.codeforcesHandle;
   inputs.codeforcesFolder.value = s.codeforcesFolder;
-  $("codeforces-since").textContent =
-    s.codeforcesEnabled && s.codeforcesSince
-      ? `On since ${new Date(s.codeforcesSince).toLocaleString()}.`
-      : "Off.";
+
   setRadio("syncMode", s.syncMode);
   setRadio("historyPolicy", s.historyPolicy);
 
@@ -96,6 +93,7 @@ function fillForm(s: Settings): void {
   }
   $("guide-repo").textContent = s.repo || "leetcode-solutions";
   updatePreview();
+  updateCodeforcesPreview();
 }
 
 function updatePreview(): void {
@@ -111,6 +109,50 @@ function updatePreview(): void {
   } catch (err) {
     pathPreview.textContent = err instanceof Error ? err.message : "Invalid settings";
   }
+}
+
+function updateCodeforcesPreview(): void {
+  const s = readForm();
+  const target = $("codeforces-path-preview");
+  try {
+    const { path } = buildPaths(s, {
+      platform: "codeforces",
+      titleSlug: "1850-a",
+      frontendId: "1850A",
+      title: "To My Critics",
+      langSlug: "cpp",
+      submissionId: "cf-216000000",
+    });
+    target.textContent = path;
+  } catch (err) {
+    target.textContent = err instanceof Error ? err.message : "Invalid settings";
+  }
+}
+
+function renderCodeforcesStatus(s: PublicState): void {
+  const box = $("codeforces-status");
+  box.className = "status-box";
+  box.replaceChildren();
+  const settings = s.settings;
+  if (!settings.codeforcesEnabled) {
+    box.append(chip("Off", "neutral"), document.createTextNode("Turn this on to save your accepted Codeforces solutions."));
+    return;
+  }
+  const since = settings.codeforcesSince ? ` since ${new Date(settings.codeforcesSince).toLocaleString()}` : "";
+  const status = s.codeforces;
+  if (!status) {
+    box.append(chip("On", "info"), document.createTextNode(`Watching${since}. Open codeforces.com to run the first check.`));
+    return;
+  }
+  const who = status.handle ? ` for ${status.handle}` : "";
+  if (status.ok) {
+    box.classList.add("ok");
+    box.append(chip("Watching", "success"), document.createTextNode(`Checking submissions${who}${since}.`));
+  } else {
+    box.classList.add("error");
+    box.append(chip("Needs attention", "danger"), document.createTextNode(status.message ?? "The last check failed."));
+  }
+  box.append(el("span", { className: "hint", text: `Last checked ${relativeTime(status.checkedAt)}. Checks run when you open codeforces.com.` }));
 }
 
 function showFieldErrors(errors: SettingsErrors): void {
@@ -218,6 +260,7 @@ async function refresh(refillForm: boolean): Promise<void> {
   state = next;
   if (refillForm && !dirty) fillForm(next.settings);
   renderConnection(next);
+  renderCodeforcesStatus(next);
   renderToken(next);
   renderHistory(next);
 }
@@ -229,12 +272,14 @@ document.addEventListener("input", (e) => {
   dirty = true;
   setMessage(saveMsg, "Unsaved changes");
   updatePreview();
+  updateCodeforcesPreview();
 });
 document.addEventListener("change", (e) => {
   if (e.target === tokenInput) return;
   dirty = true;
   setMessage(saveMsg, "Unsaved changes");
   updatePreview();
+  updateCodeforcesPreview();
 });
 
 $("save-settings").addEventListener("click", async () => {

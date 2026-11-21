@@ -521,17 +521,19 @@ export class SyncService {
   }
 
   async getPublicState(): Promise<PublicState> {
-    const [settings, token, connection, records] = await Promise.all([
+    const [settings, token, connection, records, codeforces] = await Promise.all([
       this.#store.getSettings(),
       this.#store.getToken(),
       this.#store.getConnection(),
       this.#store.getRecords(),
+      this.#store.getCodeforcesStatus(),
     ]);
     const list = Object.values(records).sort((a, b) => b.updatedAt - a.updatedAt);
     return {
       settings,
       hasToken: token !== undefined,
       connection,
+      ...(codeforces ? { codeforces } : {}),
       records: list.map(toPublic),
       counts: {
         synced: list.filter((r) => r.status === "synced").length,

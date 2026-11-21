@@ -22,6 +22,7 @@ export type CodeforcesToWorker =
       frontendId: string;
       source?: "auto" | "manual";
     }
+  | { type: "codeforces:status"; handle?: string; ok: boolean; message?: string }
   | {
       type: "codeforces:details";
       submissionId: string;

@@ -128,7 +128,7 @@
           <input id="codeforcesEnabled" type="checkbox" />
           Also save my accepted Codeforces submissions
         </label>
-        <p id="codeforces-since" class="hint"></p>
+        <div id="codeforces-status" class="status-box" role="status" aria-live="polite"></div>
         <div class="grid">
           <label>
             <span>Codeforces handle (optional)</span>
@@ -143,6 +143,7 @@
             <small class="field-error" data-for="codeforcesFolder"></small>
           </label>
         </div>
+        <p class="preview">Example path: <code id="codeforces-path-preview"></code></p>
         <p class="hint">
           Only submissions made after you turn this on are saved automatically, so your past history is not
           committed all at once.
